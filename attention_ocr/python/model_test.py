@@ -26,10 +26,10 @@ import data_provider
 
 
 def create_fake_charset(num_char_classes):
-  charset = {}
-  for i in xrange(num_char_classes):
-    charset[i] = string.printable[i % len(string.printable)]
-  return charset
+  return {
+      i: string.printable[i % len(string.printable)]
+      for i in xrange(num_char_classes)
+  }
 
 
 class ModelTest(tf.test.TestCase):
@@ -105,8 +105,9 @@ class ModelTest(tf.test.TestCase):
     values_in_range = (scores_np >= 0.0) & (scores_np <= 1.0)
     self.assertTrue(
         np.all(values_in_range),
-        msg=('Scores contains out of the range values %s' %
-             scores_np[np.logical_not(values_in_range)]))
+        msg=
+        f'Scores contains out of the range values {scores_np[np.logical_not(values_in_range)]}',
+    )
 
   def test_conv_tower_shape(self):
     with self.test_session() as sess:

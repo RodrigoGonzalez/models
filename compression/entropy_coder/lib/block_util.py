@@ -39,10 +39,7 @@ class RsqrtInitializer(object):
         1.0 / sqrt(product(shape[dims]))
       **kwargs: Extra keyword arguments to pass to tf.truncated_normal.
     """
-    if isinstance(dims, (int, long)):
-      self._dims = [dims]
-    else:
-      self._dims = dims
+    self._dims = [dims] if isinstance(dims, (int, long)) else dims
     self._kwargs = kwargs
 
   def __call__(self, shape, dtype):
@@ -73,10 +70,7 @@ class RectifierInitializer(object):
         sqrt(scale / product(shape[dims])).
       **kwargs: Extra keyword arguments to pass to tf.truncated_normal.
     """
-    if isinstance(dims, (int, long)):
-      self._dims = [dims]
-    else:
-      self._dims = dims
+    self._dims = [dims] if isinstance(dims, (int, long)) else dims
     self._kwargs = kwargs
     self._scale = scale
 

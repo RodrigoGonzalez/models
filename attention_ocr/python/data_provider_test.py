@@ -37,8 +37,8 @@ class DataProviderTest(tf.test.TestCase):
 
     self.assertEqual(image_np.shape, image_shape)
     min_value, max_value = np.min(image_np), np.max(image_np)
-    self.assertTrue((-1.28 < min_value) and (min_value < 1.27))
-    self.assertTrue((-1.28 < max_value) and (max_value < 1.27))
+    self.assertTrue(min_value > -1.28 and min_value < 1.27)
+    self.assertTrue(max_value > -1.28 and max_value < 1.27)
 
   def test_provided_data_has_correct_shape(self):
     batch_size = 4

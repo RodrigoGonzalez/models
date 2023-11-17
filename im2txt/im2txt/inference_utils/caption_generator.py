@@ -178,7 +178,7 @@ class CaptionGenerator(object):
         # For this partial caption, get the beam_size most probable next words.
         words_and_probs = list(enumerate(word_probabilities))
         words_and_probs.sort(key=lambda x: -x[1])
-        words_and_probs = words_and_probs[0:self.beam_size]
+        words_and_probs = words_and_probs[:self.beam_size]
         # Each next word gives a new partial caption.
         for w, p in words_and_probs:
           if p < 1e-12:
@@ -186,10 +186,7 @@ class CaptionGenerator(object):
           sentence = partial_caption.sentence + [w]
           logprob = partial_caption.logprob + math.log(p)
           score = logprob
-          if metadata:
-            metadata_list = partial_caption.metadata + [metadata[i]]
-          else:
-            metadata_list = None
+          metadata_list = partial_caption.metadata + [metadata[i]] if metadata else None
           if w == self.vocab.end_id:
             if self.length_normalization_factor > 0:
               score /= len(sentence)**self.length_normalization_factor

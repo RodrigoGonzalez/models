@@ -41,47 +41,66 @@ def custom_residual_block(x, neurons, kernel_size, stride, name, is_training,
   # batch norm x and relu
   init_var = np.sqrt(2.0/(kernel_size**2)/neurons)
   with arg_scope([conv_fn], 
-                 weights_regularizer=slim.l2_regularizer(wt_decay),
-                 weights_initializer=tf.random_normal_initializer(stddev=init_var),
-                 biases_initializer=tf.zeros_initializer()): 
+                   weights_regularizer=slim.l2_regularizer(wt_decay),
+                   weights_initializer=tf.random_normal_initializer(stddev=init_var),
+                   biases_initializer=tf.zeros_initializer()): 
     
     if batch_norm_param is None:
       batch_norm_param = {'center': True, 'scale': False, 
                           'activation_fn':tf.nn.relu, 
                           'is_training': is_training}
-    
-    y = slim.batch_norm(x, scope=name+'_bn', **batch_norm_param)
 
-    y = conv_fn(y, num_outputs=neurons, kernel_size=kernel_size, stride=stride,
-                activation_fn=None, scope=name+'_1',
-                normalizer_fn=slim.batch_norm,
-                normalizer_params=batch_norm_param)
-    
-    y = conv_fn(y, num_outputs=neurons, kernel_size=kernel_size,
-                    stride=1, activation_fn=None, scope=name+'_2')
+    y = slim.batch_norm(x, scope=f'{name}_bn', **batch_norm_param)
+
+    y = conv_fn(
+        y,
+        num_outputs=neurons,
+        kernel_size=kernel_size,
+        stride=stride,
+        activation_fn=None,
+        scope=f'{name}_1',
+        normalizer_fn=slim.batch_norm,
+        normalizer_params=batch_norm_param,
+    )
+
+    y = conv_fn(
+        y,
+        num_outputs=neurons,
+        kernel_size=kernel_size,
+        stride=1,
+        activation_fn=None,
+        scope=f'{name}_2',
+    )
 
     if use_residual:
       if stride != 1 or x.get_shape().as_list()[-1] != neurons:
         batch_norm_param_ = dict(batch_norm_param)
         batch_norm_param_['activation_fn'] = None
-        x = conv_fn(x, num_outputs=neurons, kernel_size=1,
-                        stride=stride if residual_stride_conv else 1,
-                        activation_fn=None, scope=name+'_0_1x1',
-                        normalizer_fn=slim.batch_norm,
-                        normalizer_params=batch_norm_param_)
+        x = conv_fn(
+            x,
+            num_outputs=neurons,
+            kernel_size=1,
+            stride=stride if residual_stride_conv else 1,
+            activation_fn=None,
+            scope=f'{name}_0_1x1',
+            normalizer_fn=slim.batch_norm,
+            normalizer_params=batch_norm_param_,
+        )
         if not residual_stride_conv:
-          x = slim.avg_pool2d(x, 1, stride=stride, scope=name+'_0_avg')
-  
-      y = tf.add(x, y, name=name+'_add')
-    
+          x = slim.avg_pool2d(x, 1, stride=stride, scope=f'{name}_0_avg')
+
+      y = tf.add(x, y, name=f'{name}_add')
+
     return y
 
 def step_gt_prob(step, step_number_op):
   # Change samping probability from 1 to -1 at step steps.
   with tf.name_scope('step_gt_prob'):
-    out = tf.cond(tf.less(step_number_op, step),
-            lambda: tf.constant(1.), lambda: tf.constant(-1.))
-    return out 
+    return tf.cond(
+        tf.less(step_number_op, step),
+        lambda: tf.constant(1.0),
+        lambda: tf.constant(-1.0),
+    ) 
 
 def inverse_sigmoid_decay(k, global_step_op):
   with tf.name_scope('inverse_sigmoid_decay'):
@@ -225,7 +244,7 @@ def fc_network(x, neurons, wt_decay, name, num_pred=None, offset=0,
   if dropout_ratio > 0:
     assert(is_training is not None), \
       'is_training needs to be defined when trainnig with dropout.'
-  
+
   repr = []
   for i, neuron in enumerate(neurons):
     init_var = np.sqrt(2.0/neuron)
@@ -244,10 +263,14 @@ def fc_network(x, neurons, wt_decay, name, num_pred=None, offset=0,
                                biases_initializer=tf.zeros_initializer(),
                                scope='{:s}_{:d}'.format(name, offset+i))
     if dropout_ratio > 0:
-       x = slim.dropout(x, keep_prob=1-dropout_ratio, is_training=is_training,
-                        scope='{:s}_{:d}'.format('dropout_'+name, offset+i))
+      x = slim.dropout(
+          x,
+          keep_prob=1 - dropout_ratio,
+          is_training=is_training,
+          scope='{:s}_{:d}'.format(f'dropout_{name}', offset + i),
+      )
     repr.append(x)
-  
+
   if num_pred is not None:
     init_var = np.sqrt(2.0/num_pred)
     x = slim.fully_connected(x, num_pred,
@@ -259,17 +282,13 @@ def fc_network(x, neurons, wt_decay, name, num_pred=None, offset=0,
   return x, repr
 
 def concat_state_x_list(f, names):
-  af = {}
-  for i, k in enumerate(names):
-    af[k] = np.concatenate([x[i] for x in f], axis=1)
-  return af
+  return {
+      k: np.concatenate([x[i] for x in f], axis=1)
+      for i, k in enumerate(names)
+  }
 
 def concat_state_x(f, names):
-  af = {}
-  for k in names:
-    af[k] = np.concatenate([x[k] for x in f], axis=1)
-    # af[k] = np.swapaxes(af[k], 0, 1)
-  return af
+  return {k: np.concatenate([x[k] for x in f], axis=1) for k in names}
 
 def sample_action(rng, action_probs, optimal_action, sample_gt_prob,
                   type='sample', combine_type='one_or_other'):

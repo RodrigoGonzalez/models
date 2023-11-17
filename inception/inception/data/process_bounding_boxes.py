@@ -92,13 +92,11 @@ class BoundingBox(object):
 
 
 def GetItem(name, root, index=0):
-  count = 0
-  for item in root.iter(name):
-    if count == index:
-      return item.text
-    count += 1
-  # Failed to find "index" occurrence of item.
-  return -1
+  return next(
+      (item.text
+       for count, item in enumerate(root.iter(name)) if count == index),
+      -1,
+  )
 
 
 def GetInt(name, root, index=0):
@@ -122,7 +120,7 @@ def ProcessXMLAnnotation(xml_file):
   try:
     tree = ET.parse(xml_file)
   except Exception:
-    print('Failed to parse: ' + xml_file, file=sys.stderr)
+    print(f'Failed to parse: {xml_file}', file=sys.stderr)
     return None
   # pylint: enable=broad-except
   root = tree.getroot()
@@ -174,12 +172,12 @@ if __name__ == '__main__':
           file=sys.stderr)
     sys.exit(-1)
 
-  xml_files = glob.glob(sys.argv[1] + '/*/*.xml')
+  xml_files = glob.glob(f'{sys.argv[1]}/*/*.xml')
   print('Identified %d XML files in %s' % (len(xml_files), sys.argv[1]),
         file=sys.stderr)
 
   if len(sys.argv) == 3:
-    labels = set([l.strip() for l in open(sys.argv[2]).readlines()])
+    labels = {l.strip() for l in open(sys.argv[2]).readlines()}
     print('Identified %d synset IDs in %s' % (len(labels), sys.argv[2]),
           file=sys.stderr)
   else:
@@ -199,7 +197,7 @@ if __name__ == '__main__':
       continue
 
     bboxes = ProcessXMLAnnotation(one_file)
-    assert bboxes is not None, 'No bounding boxes found in ' + one_file
+    assert bboxes is not None, f'No bounding boxes found in {one_file}'
 
     found_box = False
     for bbox in bboxes:

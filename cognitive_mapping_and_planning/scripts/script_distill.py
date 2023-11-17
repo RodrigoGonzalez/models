@@ -72,41 +72,24 @@ def main(_):
   args.solver.task = FLAGS.task
   args.solver.ps_tasks = FLAGS.ps_tasks
   args.solver.master = FLAGS.master
-  
+
   args.buildinger.env_class = nav_env.MeshMapper
   fu.makedirs(args.logdir)
   args.buildinger.logdir = args.logdir
   R = nav_env.get_multiplexor_class(args.buildinger, args.solver.task)
-  
-  if False:
-    pr = cProfile.Profile()
-    pr.enable()
-    rng = np.random.RandomState(0)
-    for i in range(1):
-      b, instances_perturbs = R.sample_building(rng)
-      inputs = b.worker(*(instances_perturbs))
-      for j in range(inputs['imgs'].shape[0]):
-        p = os.path.join('tmp', '{:d}.png'.format(j))
-        img = inputs['imgs'][j,0,:,:,:3]*1
-        img = (img).astype(np.uint8)
-        fu.write_image(p, img)
-      print(inputs['imgs'].shape)
-      inputs = R.pre(inputs)
-    pr.disable()
-    pr.print_stats(2)
 
   if args.control.train:
     if not gfile.Exists(args.logdir):
       gfile.MakeDirs(args.logdir)
-   
+
     m = utils.Foo()
     m.tf_graph = tf.Graph()
-    
+
     config = tf.ConfigProto()
     config.device_count['GPU'] = 1
     config.gpu_options.allow_growth = True
     config.gpu_options.per_process_gpu_memory_fraction = 0.8
-    
+
     with m.tf_graph.as_default():
       with tf.device(tf.train.replica_device_setter(args.solver.ps_tasks)):
         m = distill.setup_to_run(m, args, is_training=True,
@@ -131,7 +114,7 @@ def main(_):
             sync_optimizer=m.sync_optimizer,
             saver=m.saver_op,
             summary_op=None, session_config=config)
- 
+
   if args.control.test:
     m = utils.Foo()
     m.tf_graph = tf.Graph()
@@ -139,12 +122,12 @@ def main(_):
     with m.tf_graph.as_default():
       m = distill.setup_to_run(m, args, is_training=False,
                               batch_norm_is_training=args.control.force_batchnorm_is_training_at_test)
-      
+
       train_step_kwargs = distill.setup_train_step_kwargs_mesh(
           m, R, os.path.join(args.logdir, args.control.test_name),
           rng_seed=args.solver.task+1, is_chief=args.solver.task==0,
           iters=args.summary.test_iters, train_display_interval=None)
-      
+
       sv = slim.learning.supervisor.Supervisor(
           graph=ops.get_default_graph(), logdir=None, init_op=m.init_op,
           summary_op=None, summary_writer=None, global_step=None, saver=m.saver_op)
@@ -157,12 +140,12 @@ def main(_):
         logging.info('Starting evaluation at %s using checkpoint %s.', 
                      time.strftime('%Y-%m-%d-%H:%M:%S', time.localtime()),
                      last_checkpoint)
-        
+
         config = tf.ConfigProto()
         config.device_count['GPU'] = 1
         config.gpu_options.allow_growth = True
         config.gpu_options.per_process_gpu_memory_fraction = 0.8
-        
+
         with sv.managed_session(args.solver.master,config=config,
                                 start_standard_services=False) as sess:
           sess.run(m.init_op)

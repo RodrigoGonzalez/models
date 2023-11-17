@@ -319,7 +319,7 @@ class ShowAndTellModel(object):
       tf.summary.scalar("losses/batch_loss", batch_loss)
       tf.summary.scalar("losses/total_loss", total_loss)
       for var in tf.trainable_variables():
-        tf.summary.histogram("parameters/" + var.op.name, var)
+        tf.summary.histogram(f"parameters/{var.op.name}", var)
 
       self.total_loss = total_loss
       self.target_cross_entropy_losses = losses  # Used in evaluation.

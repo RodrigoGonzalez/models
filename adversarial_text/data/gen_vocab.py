@@ -79,8 +79,11 @@ def main(_):
     fill_vocab_from_doc(doc, vocab_freqs, doc_counts)
 
   # Filter out low-occurring terms
-  vocab_freqs = dict((term, freq) for term, freq in vocab_freqs.iteritems()
-                     if doc_counts[term] > FLAGS.doc_count_threshold)
+  vocab_freqs = {
+      term: freq
+      for term, freq in vocab_freqs.iteritems()
+      if doc_counts[term] > FLAGS.doc_count_threshold
+  }
 
   # Sort by frequency
   ordered_vocab_freqs = data_utils.sort_vocab_by_frequency(vocab_freqs)

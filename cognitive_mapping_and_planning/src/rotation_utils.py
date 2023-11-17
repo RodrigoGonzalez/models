@@ -30,11 +30,10 @@ def get_r_matrix(ax_, angle):
     S_hat = np.array(
         [[0.0, -ax[2], ax[1]], [ax[2], 0.0, -ax[0]], [-ax[1], ax[0], 0.0]],
         dtype=np.float32)
-    R = np.eye(3) + np.sin(angle)*S_hat + \
-        (1-np.cos(angle))*(np.linalg.matrix_power(S_hat, 2))
+    return (np.eye(3) + np.sin(angle) * S_hat + (1 - np.cos(angle)) *
+            (np.linalg.matrix_power(S_hat, 2)))
   else:
-    R = np.eye(3)
-  return R
+    return np.eye(3)
 
 
 def r_between(v_from_, v_to_):

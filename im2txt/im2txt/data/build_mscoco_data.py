@@ -154,10 +154,7 @@ class Vocabulary(object):
 
   def word_to_id(self, word):
     """Returns the integer id of a word string."""
-    if word in self._vocab:
-      return self._vocab[word]
-    else:
-      return self._unk_id
+    return self._vocab[word] if word in self._vocab else self._unk_id
 
 
 class ImageDecoder(object):
@@ -216,7 +213,7 @@ def _to_sequence_example(image, decoder, vocab):
   try:
     decoder.decode_jpeg(encoded_image)
   except (tf.errors.InvalidArgumentError, AssertionError):
-    print("Skipping file with invalid JPEG data: %s" % image.filename)
+    print(f"Skipping file with invalid JPEG data: {image.filename}")
     return
 
   context = tf.train.Features(feature={
@@ -231,10 +228,7 @@ def _to_sequence_example(image, decoder, vocab):
       "image/caption": _bytes_feature_list(caption),
       "image/caption_ids": _int64_feature_list(caption_ids)
   })
-  sequence_example = tf.train.SequenceExample(
-      context=context, feature_lists=feature_lists)
-
-  return sequence_example
+  return tf.train.SequenceExample(context=context, feature_lists=feature_lists)
 
 
 def _process_image_files(thread_index, ranges, name, images, decoder, vocab,
@@ -317,11 +311,8 @@ def _process_dataset(name, images, vocab, num_shards):
   # images[ranges[i][0]:ranges[i][1]].
   num_threads = min(num_shards, FLAGS.num_threads)
   spacing = np.linspace(0, len(images), num_threads + 1).astype(np.int)
-  ranges = []
   threads = []
-  for i in xrange(len(spacing) - 1):
-    ranges.append([spacing[i], spacing[i + 1]])
-
+  ranges = [[spacing[i], spacing[i + 1]] for i in xrange(len(spacing) - 1)]
   # Create a mechanism for monitoring when all threads are finished.
   coord = tf.train.Coordinator()
 
@@ -374,9 +365,7 @@ def _create_vocab(captions):
   reverse_vocab = [x[0] for x in word_counts]
   unk_id = len(reverse_vocab)
   vocab_dict = dict([(x, y) for (y, x) in enumerate(reverse_vocab)])
-  vocab = Vocabulary(vocab_dict, unk_id)
-
-  return vocab
+  return Vocabulary(vocab_dict, unk_id)
 
 
 def _process_caption(caption):
@@ -419,7 +408,7 @@ def _load_and_process_metadata(captions_file, image_dir):
     id_to_captions[image_id].append(caption)
 
   assert len(id_to_filename) == len(id_to_captions)
-  assert set([x[0] for x in id_to_filename]) == set(id_to_captions.keys())
+  assert {x[0] for x in id_to_filename} == set(id_to_captions.keys())
   print("Loaded caption metadata for %d images from %s" %
         (len(id_to_filename), captions_file))
 
@@ -465,7 +454,7 @@ def main(unused_argv):
   #   test_dataset = 10% of mscoco_val_dataset (for final evaluation).
   train_cutoff = int(0.85 * len(mscoco_val_dataset))
   val_cutoff = int(0.90 * len(mscoco_val_dataset))
-  train_dataset = mscoco_train_dataset + mscoco_val_dataset[0:train_cutoff]
+  train_dataset = mscoco_train_dataset + mscoco_val_dataset[:train_cutoff]
   val_dataset = mscoco_val_dataset[train_cutoff:val_cutoff]
   test_dataset = mscoco_val_dataset[val_cutoff:]
 

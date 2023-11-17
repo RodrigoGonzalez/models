@@ -91,7 +91,7 @@ class BlockBase(object):
     self._parent._subblocks.append(self)  # pylint: disable=protected-access
 
   def __repr__(self):
-    return '"{}" ({})'.format(self._scope_str, self.__class__.__name__)
+    return f'"{self._scope_str}" ({self.__class__.__name__})'
 
   @contextlib.contextmanager
   def _OptionalNameScope(self, scope_str):
@@ -171,15 +171,16 @@ class BlockBase(object):
   def AssertInitialized(self):
     """Asserts initialized property."""
     if not self.initialized:
-      raise RuntimeError('{} has not been initialized.'.format(self))
+      raise RuntimeError(f'{self} has not been initialized.')
 
   def VariableList(self):
     """Returns the list of all tensorflow variables used inside this block."""
-    variables = list(itertools.chain(
-        itertools.chain.from_iterable(
-            t.VariableList() for t in self._subblocks),
-        self._VariableList()))
-    return variables
+    return list(
+        itertools.chain(
+            itertools.chain.from_iterable(t.VariableList()
+                                          for t in self._subblocks),
+            self._VariableList(),
+        ))
 
   def _VariableList(self):
     """Returns the list of all tensorflow variables owned by this block."""
@@ -199,11 +200,12 @@ class BlockBase(object):
     Returns:
       A Tensor object or None.
     """
-    losses = list(itertools.chain(
-        itertools.chain.from_iterable(
-            t.CreateWeightLoss() for t in self._subblocks),
-        self._CreateWeightLoss()))
-    return losses
+    return list(
+        itertools.chain(
+            itertools.chain.from_iterable(t.CreateWeightLoss()
+                                          for t in self._subblocks),
+            self._CreateWeightLoss(),
+        ))
 
   def _CreateWeightLoss(self):
     """Returns weight loss list of variables that belong to this block."""
@@ -213,11 +215,12 @@ class BlockBase(object):
 
   def CreateUpdateOps(self):
     """Creates update operations for this block and its sub-blocks."""
-    ops = list(itertools.chain(
-        itertools.chain.from_iterable(
-            t.CreateUpdateOps() for t in self._subblocks),
-        self._CreateUpdateOps()))
-    return ops
+    return list(
+        itertools.chain(
+            itertools.chain.from_iterable(t.CreateUpdateOps()
+                                          for t in self._subblocks),
+            self._CreateUpdateOps(),
+        ))
 
   def _CreateUpdateOps(self):
     """Creates update operations for this block."""
@@ -245,14 +248,10 @@ class BlockBase(object):
 def CreateWeightLoss():
   """Returns all weight losses from the blocks in the graph."""
   stack = _block_stacks[tf.get_default_graph()]
-  if not stack:
-    return []
-  return stack[0].CreateWeightLoss()
+  return [] if not stack else stack[0].CreateWeightLoss()
 
 
 def CreateBlockUpdates():
   """Combines all updates from the blocks in the graph."""
   stack = _block_stacks[tf.get_default_graph()]
-  if not stack:
-    return []
-  return stack[0].CreateUpdateOps()
+  return [] if not stack else stack[0].CreateUpdateOps()

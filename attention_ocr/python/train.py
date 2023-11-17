@@ -128,11 +128,10 @@ def train(loss, init_fn, hparams):
         replica_id=replica_id,
         total_num_replicas=FLAGS.total_num_replicas)
     sync_optimizer = optimizer
-    startup_delay_steps = 0
   else:
-    startup_delay_steps = 0
     sync_optimizer = None
 
+  startup_delay_steps = 0
   train_op = slim.learning.create_train_op(
       loss,
       optimizer,
@@ -157,14 +156,13 @@ def prepare_training_dir():
   if not tf.gfile.Exists(FLAGS.train_log_dir):
     logging.info('Create a new training directory %s', FLAGS.train_log_dir)
     tf.gfile.MakeDirs(FLAGS.train_log_dir)
+  elif FLAGS.reset_train_dir:
+    logging.info('Reset the training directory %s', FLAGS.train_log_dir)
+    tf.gfile.DeleteRecursively(FLAGS.train_log_dir)
+    tf.gfile.MakeDirs(FLAGS.train_log_dir)
   else:
-    if FLAGS.reset_train_dir:
-      logging.info('Reset the training directory %s', FLAGS.train_log_dir)
-      tf.gfile.DeleteRecursively(FLAGS.train_log_dir)
-      tf.gfile.MakeDirs(FLAGS.train_log_dir)
-    else:
-      logging.info('Use already existing training directory %s',
-                   FLAGS.train_log_dir)
+    logging.info('Use already existing training directory %s',
+                 FLAGS.train_log_dir)
 
 
 def calculate_graph_metrics():

@@ -31,29 +31,21 @@ def create_summaries(end_points, prefix='', max_images=3, use_op_name=False):
     use_op_name: Use the op name as opposed to the shorter end_points key.
   """
   for layer_name in end_points:
-    if use_op_name:
-      name = end_points[layer_name].op.name
-    else:
-      name = layer_name
+    name = end_points[layer_name].op.name if use_op_name else layer_name
     if len(end_points[layer_name].get_shape().as_list()) == 4:
       # if it's an actual image do not attempt to reshape it
-      if end_points[layer_name].get_shape().as_list()[-1] == 1 or end_points[
-          layer_name].get_shape().as_list()[-1] == 3:
+      if end_points[layer_name].get_shape().as_list()[-1] in [1, 3]:
         visualization_image = end_points[layer_name]
       else:
         visualization_image = reshape_feature_maps(end_points[layer_name])
-      tf.summary.image(
-          '{}/{}'.format(prefix, name),
-          visualization_image,
-          max_outputs=max_images)
+      tf.summary.image(f'{prefix}/{name}',
+                       visualization_image,
+                       max_outputs=max_images)
     elif len(end_points[layer_name].get_shape().as_list()) == 3:
       images = tf.expand_dims(end_points[layer_name], 3)
-      tf.summary.image(
-          '{}/{}'.format(prefix, name),
-          images,
-          max_outputs=max_images)
+      tf.summary.image(f'{prefix}/{name}', images, max_outputs=max_images)
     elif len(end_points[layer_name].get_shape().as_list()) == 2:
-      tf.summary.histogram('{}/{}'.format(prefix, name), end_points[layer_name])
+      tf.summary.histogram(f'{prefix}/{name}', end_points[layer_name])
 
 
 def reshape_feature_maps(features_tensor):
@@ -70,12 +62,11 @@ def reshape_feature_maps(features_tensor):
   num_filters = features_tensor.get_shape().as_list()[-1]
   assert num_filters > 0
   num_filters_sqrt = math.sqrt(num_filters)
-  assert num_filters_sqrt.is_integer(
-  ), 'Number of filters should be a square number but got {}'.format(
-      num_filters)
+  assert (num_filters_sqrt.is_integer(
+  )), f'Number of filters should be a square number but got {num_filters}'
   num_filters_sqrt = int(num_filters_sqrt)
   conv_summary = tf.unstack(features_tensor, axis=3)
-  conv_one_row = tf.concat(axis=2, values=conv_summary[0:num_filters_sqrt])
+  conv_one_row = tf.concat(axis=2, values=conv_summary[:num_filters_sqrt])
   ind = 1
   conv_final = conv_one_row
   for ind in range(1, num_filters_sqrt):

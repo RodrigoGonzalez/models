@@ -43,7 +43,7 @@ class FlowersData(Dataset):
   def download_message(self):
     """Instruction to download and extract the tarball from Flowers website."""
 
-    print('Failed to find any Flowers %s files'% self.subset)
+    print(f'Failed to find any Flowers {self.subset} files')
     print('')
     print('If you have already downloaded and processed the data, then make '
           'sure to set --data_dir to point to the directory containing the '

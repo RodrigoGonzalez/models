@@ -50,10 +50,9 @@ class DsnModelAssemblyTest(tf.test.TestCase):
 
   def _testBuildDefaultModel(self):
     images = tf.to_float(np.random.rand(32, 28, 28, 1))
-    labels = {}
-    labels['classes'] = tf.one_hot(
-        tf.to_int32(np.random.randint(0, 9, (32))), 10)
-
+    labels = {
+        'classes': tf.one_hot(tf.to_int32(np.random.randint(0, 9, (32))), 10)
+    }
     params = {
         'use_separation': True,
         'layers_to_regularize': 'fc3',

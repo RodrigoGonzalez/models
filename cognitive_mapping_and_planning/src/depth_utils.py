@@ -23,8 +23,7 @@ def get_camera_matrix(width, height, fov):
   xc = (width-1.) / 2.
   zc = (height-1.) / 2.
   f = (width / 2.) / np.tan(np.deg2rad(fov / 2.))
-  camera_matrix = utils.Foo(xc=xc, zc=zc, f=f)
-  return camera_matrix
+  return utils.Foo(xc=xc, zc=zc, f=f)
 
 def get_point_cloud_from_z(Y, camera_matrix):
   """Projects the depth image Y into a 3D point cloud.
@@ -39,14 +38,14 @@ def get_point_cloud_from_z(Y, camera_matrix):
   """
   x, z = np.meshgrid(np.arange(Y.shape[-1]),
                      np.arange(Y.shape[-2]-1, -1, -1))
-  for i in range(Y.ndim-2):
+  for _ in range(Y.ndim-2):
     x = np.expand_dims(x, axis=0)
     z = np.expand_dims(z, axis=0)
   X = (x-camera_matrix.xc) * Y / camera_matrix.f
   Z = (z-camera_matrix.zc) * Y / camera_matrix.f
-  XYZ = np.concatenate((X[...,np.newaxis], Y[...,np.newaxis],
-                        Z[...,np.newaxis]), axis=X.ndim)
-  return XYZ
+  return np.concatenate(
+      (X[..., np.newaxis], Y[..., np.newaxis], Z[..., np.newaxis]),
+      axis=X.ndim)
 
 def make_geocentric(XYZ, sensor_height, camera_elevation_degree):
   """Transforms the point cloud into geocentric coordinate frame.

@@ -265,7 +265,7 @@ def Train(mnist_train_file, mnist_test_file, network_parameters, num_steps,
                    "pca_sigma": FLAGS.pca_sigma,
                   })
 
-  with tf.Graph().as_default(), tf.Session() as sess, tf.device('/cpu:0'):
+  with (tf.Graph().as_default(), tf.Session() as sess, tf.device('/cpu:0')):
     # Create the basic Mnist model.
     images, labels = MnistInput(mnist_train_file, batch_size, FLAGS.randomize)
 
@@ -290,8 +290,9 @@ def Train(mnist_train_file, mnist_test_file, network_parameters, num_steps,
       pca_sigma = FLAGS.pca_sigma
       with_privacy = FLAGS.sigma > 0
     else:
-      raise ValueError("Undefined accountant type, needs to be "
-                       "Amortized or Moments, but got %s" % FLAGS.accountant)
+      raise ValueError(
+          f"Undefined accountant type, needs to be Amortized or Moments, but got {FLAGS.accountant}"
+      )
     # Note: Here and below, we scale down the l2norm_bound by
     # batch_size. This is because per_example_gradients computes the
     # gradient of the minibatch loss with respect to each individual
@@ -347,7 +348,6 @@ def Train(mnist_train_file, mnist_test_file, network_parameters, num_steps,
     sess.run(tf.global_variables_initializer())
     sess.run(init_ops)
 
-    results = []
     start_time = time.time()
     prev_time = start_time
     filename = "results-0.json"
@@ -361,6 +361,7 @@ def Train(mnist_train_file, mnist_test_file, network_parameters, num_steps,
 
     lot_size = FLAGS.batches_per_lot * FLAGS.batch_size
     lots_per_epoch = NUM_TRAINING_IMAGES / lot_size
+    results = []
     for step in xrange(num_steps):
       epoch = step / lots_per_epoch
       curr_lr = utils.VaryRate(FLAGS.lr, FLAGS.end_lr,
@@ -394,7 +395,7 @@ def Train(mnist_train_file, mnist_test_file, network_parameters, num_steps,
           sys.stderr.write("spent privacy: eps %.4f delta %.5g\n" % (
               spent_eps, spent_delta))
 
-        saver.save(sess, save_path=save_path + "/ckpt")
+        saver.save(sess, save_path=f"{save_path}/ckpt")
         train_accuracy, _ = Eval(mnist_train_file, network_parameters,
                                  num_testing_images=NUM_TESTING_IMAGES,
                                  randomize=True, load_path=save_path)

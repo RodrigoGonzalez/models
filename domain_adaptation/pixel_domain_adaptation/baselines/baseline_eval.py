@@ -66,7 +66,7 @@ def main(unused_argv):
   if FLAGS.dataset_name in ['mnist', 'mnist_m', 'usps']:
     hparams.task_tower = 'mnist'
   else:
-    raise ValueError('Unknown dataset %s' % FLAGS.dataset_name)
+    raise ValueError(f'Unknown dataset {FLAGS.dataset_name}')
 
   if not tf.gfile.Exists(FLAGS.eval_dir):
     tf.gfile.MakeDirs(FLAGS.eval_dir)
@@ -92,17 +92,13 @@ def main(unused_argv):
     logits, _ = pixelda_task_towers.add_task_specific_model(
         images, hparams, num_classes=num_classes, is_training=True)
 
-    #####################
-    # Define the losses #
-    #####################
-    if 'classes' in labels:
-      one_hot_labels = labels['classes']
-      loss = tf.losses.softmax_cross_entropy(
-          onehot_labels=one_hot_labels, logits=logits)
-      tf.summary.scalar('losses/Classification_Loss', loss)
-    else:
+    if 'classes' not in labels:
       raise ValueError('Only support classification for now.')
 
+    one_hot_labels = labels['classes']
+    loss = tf.losses.softmax_cross_entropy(
+        onehot_labels=one_hot_labels, logits=logits)
+    tf.summary.scalar('losses/Classification_Loss', loss)
     total_loss = tf.losses.get_total_loss()
 
     predictions = tf.reshape(tf.argmax(logits, 1), shape=[-1])

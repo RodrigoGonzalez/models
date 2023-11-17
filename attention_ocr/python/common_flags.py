@@ -145,5 +145,4 @@ def create_mparams():
 
 
 def create_model(*args, **kwargs):
-  ocr_model = model.Model(mparams=create_mparams(), *args, **kwargs)
-  return ocr_model
+  return model.Model(mparams=create_mparams(), *args, **kwargs)

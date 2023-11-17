@@ -36,8 +36,8 @@ def main(unused_args):
   # cluster spec.
   ps_hosts = FLAGS.ps_hosts.split(',')
   worker_hosts = FLAGS.worker_hosts.split(',')
-  tf.logging.info('PS hosts are: %s' % ps_hosts)
-  tf.logging.info('Worker hosts are: %s' % worker_hosts)
+  tf.logging.info(f'PS hosts are: {ps_hosts}')
+  tf.logging.info(f'Worker hosts are: {worker_hosts}')
 
   cluster_spec = tf.train.ClusterSpec({'ps': ps_hosts,
                                        'worker': worker_hosts})

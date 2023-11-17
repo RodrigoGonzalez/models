@@ -27,9 +27,7 @@ FLAGS = flags.FLAGS
 
 def remove_depth(images):
   """Takes a batch of images and remove depth channel if present."""
-  if images.shape.as_list()[-1] == 4:
-    return images[:, :, :, 0:3]
-  return images
+  return images[:, :, :, 0:3] if images.shape.as_list()[-1] == 4 else images
 
 
 def image_grid(images, max_grid_size=4):
@@ -57,7 +55,6 @@ def image_grid(images, max_grid_size=4):
     depth = tf.reshape(depth, [-1, images.shape.as_list()[2], 3])
     depth_split = tf.split(0, grid_size, depth)
     grid = tf.concat(split + depth_split, 1)
-    return tf.expand_dims(grid, 0)
   else:
     images = images[:grid_size * grid_size, :, :, :]
     images = tf.reshape(
@@ -65,7 +62,8 @@ def image_grid(images, max_grid_size=4):
                  images.shape.as_list()[3]])
     split = tf.split(images, grid_size, 0)
     grid = tf.concat(split, 1)
-    return tf.expand_dims(grid, 0)
+
+  return tf.expand_dims(grid, 0)
 
 
 def source_and_output_image_grid(output_images,
@@ -127,7 +125,7 @@ def summarize_transferred_grid(transferred_images,
     grid = source_and_output_image_grid(transferred_images, source_images)
   else:
     grid = image_grid(transferred_images)
-  tf.summary.image('%s_Images_Grid' % name, grid, max_outputs=1)
+  tf.summary.image(f'{name}_Images_Grid', grid, max_outputs=1)
 
 
 def summarize_transferred(source_images,
@@ -170,8 +168,9 @@ def summarize_transferred(source_images,
       diffs,
   ], 2)
 
-  tf.summary.image(
-      '%s_difference' % name, transition_images, max_outputs=max_images)
+  tf.summary.image(f'{name}_difference',
+                   transition_images,
+                   max_outputs=max_images)
 
 
 def summaries_color_distributions(images, name):
@@ -181,7 +180,7 @@ def summaries_color_distributions(images, name):
     images: A `Tensor` of size [batch_size, height, width, 3].
     name: The name of the images being summarized.
   """
-  tf.summary.histogram('color_values/%s' % name, images)
+  tf.summary.histogram(f'color_values/{name}', images)
 
 
 def summarize_images(images, name):
@@ -192,4 +191,4 @@ def summarize_images(images, name):
     name: The name of the images being summarized.
   """
   grid = image_grid(images)
-  tf.summary.image('%s_Images' % name, grid, max_outputs=1)
+  tf.summary.image(f'{name}_Images', grid, max_outputs=1)

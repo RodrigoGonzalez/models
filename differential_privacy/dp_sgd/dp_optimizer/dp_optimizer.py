@@ -129,7 +129,7 @@ class DPGradientDescentOptimizer(tf.train.GradientDescentOptimizer):
       var_list = tf.trainable_variables()
     for var in var_list:
       if not isinstance(var, tf.Variable):
-        raise TypeError("Argument is not a variable.Variable: %s" % var)
+        raise TypeError(f"Argument is not a variable.Variable: {var}")
 
     # Modification: apply gradient once every batches_per_lot many steps.
     # This may lead to smaller error
@@ -231,6 +231,7 @@ class DPGradientDescentOptimizer(tf.train.GradientDescentOptimizer):
 
       last_step_update = tf.group(*([apply_san_grads] + resets_list))
       return last_step_update
+
     # pylint: disable=g-long-lambda
     update_op = tf.cond(update_cond,
                         lambda: last_in_lot_op(

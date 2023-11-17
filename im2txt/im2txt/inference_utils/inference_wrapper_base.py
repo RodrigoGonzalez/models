@@ -89,7 +89,7 @@ class InferenceWrapperBase(object):
     if tf.gfile.IsDirectory(checkpoint_path):
       checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
       if not checkpoint_path:
-        raise ValueError("No checkpoint file found in: %s" % checkpoint_path)
+        raise ValueError(f"No checkpoint file found in: {checkpoint_path}")
 
     def _restore_fn(sess):
       tf.logging.info("Loading model from checkpoint: %s", checkpoint_path)

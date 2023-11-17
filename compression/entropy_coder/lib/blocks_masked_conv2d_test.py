@@ -69,7 +69,7 @@ class MaskedConv2DTest(tf.test.TestCase):
     kernel_feed = np.ones(kernel_shape)
     x_shape = [5] * 3 + [input_depth]
     x_feed = np.ones(x_shape)
-    y_expected = np.zeros(x_shape[0:3] + [output_depth])
+    y_expected = np.zeros(x_shape[:3] + [output_depth])
     y_expected[:, :, :] = np.arange(output_depth)
 
     init_kernel = lambda s, t: tf.constant(kernel_feed, dtype=t, shape=s)
@@ -170,10 +170,11 @@ class MaskedConv2DTest(tf.test.TestCase):
 
     conv = blocks_masked_conv2d.RasterScanConv2D(
         depth=filter_shape[-1],
-        filter_size=filter_shape[0:2],
+        filter_size=filter_shape[:2],
         strides=strides[1:3],
         padding='SAME',
-        initializer=tf.constant_initializer(value=1.0))
+        initializer=tf.constant_initializer(value=1.0),
+    )
     x = tf.placeholder(dtype=tf.float32, shape=input_shape)
     y = conv(x)
 

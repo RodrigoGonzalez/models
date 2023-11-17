@@ -102,13 +102,15 @@ def prefetch_input_data(reader,
         capacity=capacity,
         min_after_dequeue=min_queue_examples,
         dtypes=[tf.string],
-        name="random_" + value_queue_name)
+        name=f"random_{value_queue_name}",
+    )
   else:
     filename_queue = tf.train.string_input_producer(
         data_files, shuffle=False, capacity=1, name=shard_queue_name)
     capacity = values_per_shard + 3 * batch_size
-    values_queue = tf.FIFOQueue(
-        capacity=capacity, dtypes=[tf.string], name="fifo_" + value_queue_name)
+    values_queue = tf.FIFOQueue(capacity=capacity,
+                                dtypes=[tf.string],
+                                name=f"fifo_{value_queue_name}")
 
   enqueue_ops = []
   for _ in range(num_reader_threads):

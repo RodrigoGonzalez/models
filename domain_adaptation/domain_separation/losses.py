@@ -214,8 +214,7 @@ def difference_loss(private_samples, shared_samples, weight=1.0, name=''):
   cost = tf.reduce_mean(tf.square(correlation_matrix)) * weight
   cost = tf.where(cost > 0, cost, 0, name='value')
 
-  tf.summary.scalar('losses/Difference Loss {}'.format(name),
-                                       cost)
+  tf.summary.scalar(f'losses/Difference Loss {name}', cost)
   assert_op = tf.Assert(tf.is_finite(cost), [cost])
   with tf.control_dependencies([assert_op]):
     tf.losses.add_loss(cost)
@@ -238,20 +237,22 @@ def log_quaternion_loss_batch(predictions, labels, params):
   use_logging = params['use_logging']
   assertions = []
   if use_logging:
-    assertions.append(
+    assertions.extend((
         tf.Assert(
             tf.reduce_all(
                 tf.less(
                     tf.abs(tf.reduce_sum(tf.square(predictions), [1]) - 1),
-                    1e-4)),
-            ['The l2 norm of each prediction quaternion vector should be 1.']))
-    assertions.append(
+                    1e-4,
+                )),
+            ['The l2 norm of each prediction quaternion vector should be 1.'],
+        ),
         tf.Assert(
             tf.reduce_all(
-                tf.less(
-                    tf.abs(tf.reduce_sum(tf.square(labels), [1]) - 1), 1e-4)),
-            ['The l2 norm of each label quaternion vector should be 1.']))
-
+                tf.less(tf.abs(tf.reduce_sum(tf.square(labels), [1]) - 1),
+                        1e-4)),
+            ['The l2 norm of each label quaternion vector should be 1.'],
+        ),
+    ))
   with tf.control_dependencies(assertions):
     product = tf.multiply(predictions, labels)
   internal_dot_products = tf.reduce_sum(product, [1])
@@ -262,8 +263,7 @@ def log_quaternion_loss_batch(predictions, labels, params):
         [internal_dot_products, tf.shape(internal_dot_products)],
         'internal_dot_products:')
 
-  logcost = tf.log(1e-4 + 1 - tf.abs(internal_dot_products))
-  return logcost
+  return tf.log(1e-4 + 1 - tf.abs(internal_dot_products))
 
 
 def log_quaternion_loss(predictions, labels, params):

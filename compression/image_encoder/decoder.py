@@ -40,8 +40,8 @@ FLAGS = tf.flags.FLAGS
 
 def get_input_tensor_names():
   name_list = ['GruBinarizer/SignBinarizer/Sign:0']
-  for i in range(1, 16):
-    name_list.append('GruBinarizer/SignBinarizer/Sign_{}:0'.format(i))
+  name_list.extend(f'GruBinarizer/SignBinarizer/Sign_{i}:0'
+                   for i in range(1, 16))
   return name_list
 
 
@@ -101,13 +101,14 @@ def main(_):
     input_image = tf.placeholder(tf.uint8)
     encoded_image = tf.image.encode_png(input_image)
 
-    input_tensors = [graph.get_tensor_by_name(name) for name in
-                     get_input_tensor_names()][0:iteration+1]
-    outputs = [graph.get_tensor_by_name(name) for name in
-               get_output_tensor_names()][0:iteration+1]
+    input_tensors = [
+        graph.get_tensor_by_name(name) for name in get_input_tensor_names()
+    ][:iteration + 1]
+    outputs = [
+        graph.get_tensor_by_name(name) for name in get_output_tensor_names()
+    ][:iteration + 1]
 
-  feed_dict = {key: value for (key, value) in zip(input_tensors,
-                                                  numpy_codes)}
+  feed_dict = dict(zip(input_tensors, numpy_codes))
 
   with tf.Session(graph=graph) as sess:
     results = sess.run(outputs, feed_dict=feed_dict)

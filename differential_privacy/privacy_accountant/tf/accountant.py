@@ -281,14 +281,14 @@ class MomentsAccountant(object):
     log_moments = sess.run(self._log_moments)
     log_moments_with_order = zip(self._moment_orders, log_moments)
     if target_eps is not None:
-      for eps in target_eps:
-        eps_deltas.append(
-            EpsDelta(eps, self._compute_delta(log_moments_with_order, eps)))
+      eps_deltas.extend(
+          EpsDelta(eps, self._compute_delta(log_moments_with_order, eps))
+          for eps in target_eps)
     else:
       assert target_deltas
-      for delta in target_deltas:
-        eps_deltas.append(
-            EpsDelta(self._compute_eps(log_moments_with_order, delta), delta))
+      eps_deltas.extend(
+          EpsDelta(self._compute_eps(log_moments_with_order, delta), delta)
+          for delta in target_deltas)
     return eps_deltas
 
 
@@ -367,10 +367,7 @@ class GaussianMomentsAccountant(MomentsAccountant):
     # Note: this computation is done by broadcasting pointwise multiplication
     # between [t+1, t+1] tensor and [t+1] tensor.
     y = tf.multiply(x, tf.exp(exponents))
-    # z[i] = sum_j y[i, j]
-    #      = sum_j (i choose j) * (-1)^{i-j} * exp(j(j-1)/(2 sigma^2))
-    z = tf.reduce_sum(y, 1)
-    return z
+    return tf.reduce_sum(y, 1)
 
   def _compute_log_moment(self, sigma, q, moment_order):
     """Compute high moment of privacy loss.

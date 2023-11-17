@@ -54,11 +54,11 @@ def _NumpyConv2D(x, f, strides, padding, rate=1):
     # Pad the input using numpy.pad().
     mode = None
     if padding == 'SAME':
-      mode = str('constant')
+      mode = 'constant'
     if padding == 'REFLECT':
-      mode = str('reflect')
+      mode = 'reflect'
     if padding == 'SYMMETRIC':
-      mode = str('symmetric')
+      mode = 'symmetric'
     x = np.pad(x, pad, mode=mode)
 
   # Since x is now properly padded, proceed as if padding mode is VALID.
@@ -80,8 +80,7 @@ def _NumpyConv2D(x, f, strides, padding, rate=1):
                                l:(l + f.shape[1]),
                                :].reshape((x_window.shape[0], -1))
 
-  y = np.tensordot(x_window, f.reshape((-1, f.shape[3])), axes=1)
-  return y
+  return np.tensordot(x_window, f.reshape((-1, f.shape[3])), axes=1)
 
 
 class BlocksStdTest(tf.test.TestCase):
@@ -154,11 +153,7 @@ class BlocksStdTest(tf.test.TestCase):
       self.assertAllClose(y1_res + y2_res, ys_res)
 
   def CheckNN(self, y, nn, act=None):
-    if act:
-      pre_act = self.CheckUnary(y, act)
-    else:
-      pre_act = y
-
+    pre_act = self.CheckUnary(y, act) if act else y
     if not isinstance(nn._bias, blocks_std.PassThrough):
       pre_bias = self.CheckBiasAdd(pre_act, nn._bias)
     else:
@@ -216,12 +211,14 @@ class BlocksStdTest(tf.test.TestCase):
     strides = [1, 2, 2, 1]
     padding = 'SAME'
 
-    conv = blocks_std.Conv2D(depth=f_shape[-1],
-                             filter_size=f_shape[0:2],
-                             strides=strides[1:3],
-                             padding=padding,
-                             act=None,
-                             bias=None)
+    conv = blocks_std.Conv2D(
+        depth=f_shape[-1],
+        filter_size=f_shape[:2],
+        strides=strides[1:3],
+        padding=padding,
+        act=None,
+        bias=None,
+    )
     x_value = np.random.normal(size=x_shape)
     x = tf.convert_to_tensor(x_value, dtype=tf.float32)
     y = conv(x)
@@ -243,12 +240,14 @@ class BlocksStdTest(tf.test.TestCase):
     strides = [1, 2, 2, 1]
     padding = 'VALID'
 
-    conv = blocks_std.Conv2D(depth=f_shape[-1],
-                             filter_size=f_shape[0:2],
-                             strides=strides[1:3],
-                             padding=padding,
-                             act=None,
-                             bias=None)
+    conv = blocks_std.Conv2D(
+        depth=f_shape[-1],
+        filter_size=f_shape[:2],
+        strides=strides[1:3],
+        padding=padding,
+        act=None,
+        bias=None,
+    )
     x_value = np.random.normal(size=x_shape)
     x = tf.convert_to_tensor(x_value, dtype=tf.float32)
     y = conv(x)
@@ -270,12 +269,14 @@ class BlocksStdTest(tf.test.TestCase):
     strides = [1, 1, 1, 1]
     padding = 'SYMMETRIC'
 
-    conv = blocks_std.Conv2D(depth=f_shape[-1],
-                             filter_size=f_shape[0:2],
-                             strides=strides[1:3],
-                             padding=padding,
-                             act=None,
-                             bias=None)
+    conv = blocks_std.Conv2D(
+        depth=f_shape[-1],
+        filter_size=f_shape[:2],
+        strides=strides[1:3],
+        padding=padding,
+        act=None,
+        bias=None,
+    )
     x_value = np.random.normal(size=x_shape)
     x = tf.convert_to_tensor(x_value, dtype=tf.float32)
     y = conv(x)
@@ -297,12 +298,14 @@ class BlocksStdTest(tf.test.TestCase):
     strides = [1, 2, 2, 1]
     padding = 'REFLECT'
 
-    conv = blocks_std.Conv2D(depth=f_shape[-1],
-                             filter_size=f_shape[0:2],
-                             strides=strides[1:3],
-                             padding=padding,
-                             act=None,
-                             bias=None)
+    conv = blocks_std.Conv2D(
+        depth=f_shape[-1],
+        filter_size=f_shape[:2],
+        strides=strides[1:3],
+        padding=padding,
+        act=None,
+        bias=None,
+    )
     x_value = np.random.normal(size=x_shape)
     x = tf.convert_to_tensor(x_value, dtype=tf.float32)
     y = conv(x)
@@ -322,12 +325,14 @@ class BlocksStdTest(tf.test.TestCase):
     strides = [1, 2, 2, 1]
     output_shape = [19, 6, 4, 128]
 
-    conv = blocks_std.Conv2D(depth=filter_shape[-1],
-                             filter_size=filter_shape[0:2],
-                             strides=strides[1:3],
-                             padding='VALID',
-                             act=None,
-                             bias=blocks_std.Bias(1))
+    conv = blocks_std.Conv2D(
+        depth=filter_shape[-1],
+        filter_size=filter_shape[:2],
+        strides=strides[1:3],
+        padding='VALID',
+        act=None,
+        bias=blocks_std.Bias(1),
+    )
     x = tf.placeholder(dtype=tf.float32, shape=input_shape)
 
     y = conv(x)

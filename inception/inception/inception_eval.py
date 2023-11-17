@@ -77,8 +77,9 @@ def _eval_once(saver, summary_writer, top_1_op, top_5_op, summary_op):
       #   /my-favorite-path/imagenet_train/model.ckpt-0,
       # extract global_step from it.
       global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
-      print('Successfully loaded model from %s at step=%s.' %
-            (ckpt.model_checkpoint_path, global_step))
+      print(
+          f'Successfully loaded model from {ckpt.model_checkpoint_path} at step={global_step}.'
+      )
     else:
       print('No checkpoint file found')
       return
@@ -98,7 +99,7 @@ def _eval_once(saver, summary_writer, top_1_op, top_5_op, summary_op):
       total_sample_count = num_iter * FLAGS.batch_size
       step = 0
 
-      print('%s: starting evaluation on (%s).' % (datetime.now(), FLAGS.subset))
+      print(f'{datetime.now()}: starting evaluation on ({FLAGS.subset}).')
       start_time = time.time()
       while step < num_iter and not coord.should_stop():
         top_1, top_5 = sess.run([top_1_op, top_5_op])

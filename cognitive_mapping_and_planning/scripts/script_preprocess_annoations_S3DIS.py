@@ -31,17 +31,13 @@ save_variables = utils.save_variables
 
 def _get_semantic_maps(building_name, transform, map_, flip, cats):
   rooms = get_room_in_building(building_name)
-  maps = []
-  for cat in cats:
-    maps.append(np.zeros((map_.size[1], map_.size[0])))
-  
+  maps = [np.zeros((map_.size[1], map_.size[0])) for _ in cats]
   for r in rooms:
     room = load_room(building_name, r, category_list=cats)
     classes = room['class_id']
     for i, cat in enumerate(cats):
       c_ind = cats.index(cat)
-      ind = [_ for _, c in enumerate(classes) if c == c_ind]
-      if len(ind) > 0:
+      if ind := [_ for _, c in enumerate(classes) if c == c_ind]:
         vs = [room['vertexs'][x]*1 for x in ind]
         vs = np.concatenate(vs, axis=0)
         if transform:
@@ -59,19 +55,25 @@ def _get_semantic_maps(building_name, transform, map_, flip, cats):
 def _map_building_name(building_name):
   b = int(building_name.split('_')[0][4])
   out_name = 'Area_{:d}'.format(b)
-  if b == 5:
-    if int(building_name.split('_')[0][5]) == 1:
-      transform = True
-    else:
-      transform = False
-  else:
-    transform = False
+  transform = int(building_name.split('_')[0][5]) == 1 if b == 5 else False
   return out_name, transform
 
 def get_categories():
-  cats = ['beam', 'board', 'bookcase', 'ceiling', 'chair', 'clutter', 'column',
-          'door', 'floor', 'sofa', 'table', 'wall', 'window']
-  return cats
+  return [
+      'beam',
+      'board',
+      'bookcase',
+      'ceiling',
+      'chair',
+      'clutter',
+      'column',
+      'door',
+      'floor',
+      'sofa',
+      'table',
+      'wall',
+      'window',
+  ]
 
 def _write_map_files(b_in, b_out, transform):
   cats = get_categories()
@@ -114,7 +116,8 @@ def collect_room(building_name, room_name):
                           room_name, 'Annotations')
   files = glob.glob1(room_dir, '*.txt')
   files = sorted(files, key=lambda s: s.lower())
-  vertexs = []; colors = [];
+  vertexs = []
+  colors = [];
   for f in files:
     file_name = os.path.join(room_dir, f)
     logging.info('  %s', file_name)
@@ -125,8 +128,7 @@ def collect_room(building_name, room_name):
     vertexs.append(vertex)
     colors.append(color)
   files = [f.split('.')[0] for f in files]
-  out = {'vertexs': vertexs, 'colors': colors, 'names': files}
-  return out
+  return {'vertexs': vertexs, 'colors': colors, 'names': files}
 
 def load_room(building_name, room_name, category_list=None):
   room = collect_room(building_name, room_name)
@@ -162,8 +164,9 @@ def write_room_dimensions(b_in, b_out, transform):
     room_dimension[r] = np.concatenate((np.min(vertex, axis=0), np.max(vertex, axis=0)), axis=0)
   if transform == 1:
     room_dimension = _transform_area5b(room_dimension)
-  
-  out_file = os.path.join(DATA_DIR, 'processing', 'room-dimension', b_out+'.pkl')
+
+  out_file = os.path.join(DATA_DIR, 'processing', 'room-dimension',
+                          f'{b_out}.pkl')
   save_variables(out_file, [room_dimension], ['room_dimension'], overwrite=True)
 
 def write_room_dimensions_all(I):

@@ -57,9 +57,11 @@ def make_map(padding, resolution, vertex=None, sc=1.):
   min_, max_ = _get_xy_bounding_box(vertex*sc, padding=padding)
   sz = np.ceil((max_ - min_ + 1) / resolution).astype(np.int32)
   max_ = min_ + sz * resolution - 1
-  map = utils.Foo(origin=min_, size=sz, max=max_, resolution=resolution,
-                  padding=padding)
-  return map
+  return utils.Foo(origin=min_,
+                   size=sz,
+                   max=max_,
+                   resolution=resolution,
+                   padding=padding)
 
 def _fill_holes(img, thresh):
   """Fills holes less than thresh area (assumes 4 connectivity when computing
@@ -86,7 +88,7 @@ def compute_traversibility(map, robot_base, robot_height, robot_radius,
   num_obstcale_points = np.zeros((map.size[1], map.size[0]))
   num_points = np.zeros((map.size[1], map.size[0]))
 
-  for i, shapes in enumerate(shapess):
+  for shapes in shapess:
     for j in range(shapes.get_number_of_meshes()):
       p, face_areas, face_idx = shapes.sample_points_on_face_of_shape(
           j, n_samples_per_face, sc)
@@ -168,7 +170,7 @@ def get_graph_origin_loc(rng, traversible):
 def generate_egocentric_maps(scaled_maps, map_scales, map_crop_sizes, loc,
                              x_axis, y_axis, theta):
   maps = []
-  for i, (map_, sc, map_crop_size) in enumerate(zip(scaled_maps, map_scales, map_crop_sizes)):
+  for map_, sc, map_crop_size in zip(scaled_maps, map_scales, map_crop_sizes):
     maps_i = np.array(get_map_to_predict(loc*sc, x_axis, y_axis, map_,
                                          map_crop_size,
                                          interpolation=cv2.INTER_LINEAR)[0])

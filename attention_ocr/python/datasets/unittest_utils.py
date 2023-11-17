@@ -59,6 +59,6 @@ def create_serialized_example(name_to_values):
     elif isinstance(values[0], int):
       add = feature.int64_list.value.extend
     else:
-      raise AssertionError('Unsupported type: %s' % type(values[0]))
+      raise AssertionError(f'Unsupported type: {type(values[0])}')
     add(values)
   return example.SerializeToString()

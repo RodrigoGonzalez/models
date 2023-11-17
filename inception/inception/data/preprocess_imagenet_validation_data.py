@@ -44,6 +44,7 @@ Sample usage:
   imagenet_2012_validation_synset_labels.txt
 """
 
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -76,7 +77,7 @@ if __name__ == '__main__':
     basename = 'ILSVRC2012_val_000%.5d.JPEG' % (i + 1)
     original_filename = os.path.join(data_dir, basename)
     if not os.path.exists(original_filename):
-      print('Failed to find: %s' % original_filename)
+      print(f'Failed to find: {original_filename}')
       sys.exit(-1)
     new_filename = os.path.join(data_dir, labels[i], basename)
     os.rename(original_filename, new_filename)

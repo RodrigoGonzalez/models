@@ -79,10 +79,7 @@ def GetTensorOpName(x):
   """
 
   t = x.name.rsplit(":", 1)
-  if len(t) == 1:
-    return x.name
-  else:
-    return t[0]
+  return x.name if len(t) == 1 else t[0]
 
 
 def BuildNetwork(inputs, network_parameters):
@@ -110,8 +107,8 @@ def BuildNetwork(inputs, network_parameters):
         outputs,
         [-1, conv_param.in_size, conv_param.in_size,
          conv_param.in_channels])
-    conv_weights_name = "%s_conv_weight" % (conv_param.name)
-    conv_bias_name = "%s_conv_bias" % (conv_param.name)
+    conv_weights_name = f"{conv_param.name}_conv_weight"
+    conv_bias_name = f"{conv_param.name}_conv_bias"
     conv_std_dev = 1.0 / (conv_param.patch_size
                           * math.sqrt(conv_param.in_channels))
     conv_weights = tf.Variable(
@@ -142,8 +139,8 @@ def BuildNetwork(inputs, network_parameters):
                          padding="SAME")
     outputs = mpd
     num_inputs = conv_param.num_outputs
-    # this should equal
-    # in_size * in_size * out_channels / (stride * max_pool_stride)
+      # this should equal
+      # in_size * in_size * out_channels / (stride * max_pool_stride)
 
   # once all the convs are done, reshape to make it flat
   outputs = tf.reshape(outputs, [-1, num_inputs])
@@ -160,7 +157,7 @@ def BuildNetwork(inputs, network_parameters):
 
   for layer_parameters in network_parameters.layer_parameters:
     num_units = layer_parameters.num_units
-    hidden_weights_name = "%s_weight" % (layer_parameters.name)
+    hidden_weights_name = f"{layer_parameters.name}_weight"
     hidden_weights = tf.Variable(
         tf.truncated_normal([num_inputs, num_units],
                             stddev=1.0 / math.sqrt(num_inputs)),
@@ -175,7 +172,7 @@ def BuildNetwork(inputs, network_parameters):
 
     outputs = tf.matmul(outputs, hidden_weights)
     if layer_parameters.with_bias:
-      hidden_biases_name = "%s_bias" % (layer_parameters.name)
+      hidden_biases_name = f"{layer_parameters.name}_bias"
       hidden_biases = tf.Variable(tf.zeros([num_units]),
                                   name=hidden_biases_name)
       training_parameters[hidden_biases_name] = {}
@@ -211,10 +208,7 @@ def VaryRate(start, end, saturate_epochs, epoch):
     return start
 
   step = (start - end) / (saturate_epochs - 1)
-  if epoch < saturate_epochs:
-    return start - step * epoch
-  else:
-    return end
+  return start - step * epoch if epoch < saturate_epochs else end
 
 
 def BatchClipByL2norm(t, upper_bound, name=None):

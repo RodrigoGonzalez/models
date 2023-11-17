@@ -42,8 +42,8 @@ FLAGS = tf.flags.FLAGS
 
 def get_output_tensor_names():
   name_list = ['GruBinarizer/SignBinarizer/Sign:0']
-  for i in range(1, 16):
-    name_list.append('GruBinarizer/SignBinarizer/Sign_{}:0'.format(i))
+  name_list.extend(f'GruBinarizer/SignBinarizer/Sign_{i}:0'
+                   for i in range(1, 16))
   return name_list
 
 
@@ -77,10 +77,10 @@ def main(_):
     _, ext = os.path.splitext(FLAGS.input_image)
     if ext == '.png':
       decoded_image = tf.image.decode_png(input_image, channels=3)
-    elif ext == '.jpeg' or ext == '.jpg':
+    elif ext in ['.jpeg', '.jpg']:
       decoded_image = tf.image.decode_jpeg(input_image, channels=3)
     else:
-      assert False, 'Unsupported file format {}'.format(ext)
+      assert False, f'Unsupported file format {ext}'
     decoded_image = tf.expand_dims(decoded_image, 0)
 
   with tf.Session(graph=graph) as sess:
@@ -88,7 +88,7 @@ def main(_):
                                                    input_image_str})
     results = sess.run(outputs, feed_dict={input_tensor: img_array})
 
-  results = results[0:FLAGS.iteration + 1]
+  results = results[:FLAGS.iteration + 1]
   int_codes = np.asarray([x.astype(np.int8) for x in results])
 
   # Convert int codes to binary.

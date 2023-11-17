@@ -100,8 +100,7 @@ def _select_classes(all_maps, all_cats, cats_to_use):
   for c in cats_to_use:
     ind = all_cats.index(c)
     inds.append(ind)
-  out_maps = all_maps[:,:,inds]
-  return out_maps
+  return all_maps[:,:,inds]
 
 def _get_room_dimensions(file_name, resolution, origin, flip=False):
   if fu.exists(file_name):
@@ -123,21 +122,17 @@ def _get_room_dimensions(file_name, resolution, origin, flip=False):
     dims[:,3] = dims[:,3] - origin[0]
     dims[:,4] = dims[:,4] - origin[1]
     dims = dims / resolution
-    out = {'names': names, 'dims': dims}
+    return {'names': names, 'dims': dims}
   else:
-    out = None
-  return out
+    return None
 
 def _filter_rooms(room_dims, room_regex):
   pattern = re.compile(room_regex)
-  ind = []
-  for i, name in enumerate(room_dims['names']):
-    if pattern.match(name):
-      ind.append(i)
-  new_room_dims = {}
-  new_room_dims['names'] = [room_dims['names'][i] for i in ind]
-  new_room_dims['dims'] = room_dims['dims'][ind,:]*1
-  return new_room_dims
+  ind = [i for i, name in enumerate(room_dims['names']) if pattern.match(name)]
+  return {
+      'names': [room_dims['names'][i] for i in ind],
+      'dims': room_dims['dims'][ind, :] * 1,
+  }
 
 def _label_nodes_with_room_id(xyt, room_dims):
   # Label the room with the ID into things.
@@ -180,7 +175,7 @@ def _get_relative_goal_loc(goal_loc, loc, theta):
 def _gen_perturbs(rng, batch_size, num_steps, lr_flip, delta_angle, delta_xy,
                   structured):
   perturbs = []
-  for i in range(batch_size):
+  for _ in range(batch_size):
     # Doing things one by one for each episode in this batch. This way this
     # remains replicatable even when we change the batch size.
     p = np.zeros((num_steps+1, 4))
@@ -188,10 +183,8 @@ def _gen_perturbs(rng, batch_size, num_steps, lr_flip, delta_angle, delta_xy,
       # Flip the whole trajectory.
       p[:,3] = rng.rand(1)-0.5
     if delta_angle > 0:
-      if structured:
-        p[:,2] = (rng.rand(1)-0.5)* delta_angle
-      else:
-        p[:,2] = (rng.rand(p.shape[0])-0.5)* delta_angle
+      p[:, 2] = ((rng.rand(1) - 0.5) * delta_angle if structured else
+                 (rng.rand(p.shape[0]) - 0.5) * delta_angle)
     if delta_xy > 0:
       if structured:
         p[:,:2] = (rng.rand(1, 2)-0.5)*delta_xy
@@ -203,8 +196,7 @@ def _gen_perturbs(rng, batch_size, num_steps, lr_flip, delta_angle, delta_xy,
 def get_multiplexer_class(args, task_number):
   assert(args.task_params.base_class == 'Building')
   logging.info('Returning BuildingMultiplexer')
-  R = BuildingMultiplexer(args, task_number)
-  return R
+  return BuildingMultiplexer(args, task_number)
 
 class GridWorld():
   def __init__(self):
@@ -276,9 +268,10 @@ class GridWorld():
     ind = np.ravel_multi_index((y,x), self.traversible.shape)
     is_traversible = self.traversible.ravel()[ind]
 
-    is_valid = np.all(np.concatenate((is_inside[:,np.newaxis], is_traversible),
-                                     axis=1), axis=1)
-    return is_valid
+    return np.all(
+        np.concatenate((is_inside[:, np.newaxis], is_traversible), axis=1),
+        axis=1,
+    )
 
 
   def valid_fn_vec(self, pqr):
@@ -295,9 +288,10 @@ class GridWorld():
     ind = np.ravel_multi_index((y,x), self.traversible.shape)
     is_traversible = self.traversible.ravel()[ind]
 
-    is_valid = np.all(np.concatenate((is_inside[:,np.newaxis], is_traversible),
-                                     axis=1), axis=1)
-    return is_valid
+    return np.all(
+        np.concatenate((is_inside[:, np.newaxis], is_traversible), axis=1),
+        axis=1,
+    )
 
   def get_feasible_actions(self, node_ids):
     """Returns the feasible set of actions from the current node."""
@@ -352,9 +346,7 @@ class Building(GridWorld):
       for shapes in shapess:
         shapes.flip_shape()
 
-    vs = []
-    for shapes in shapess:
-      vs.append(shapes.get_vertices()[0])
+    vs = [shapes.get_vertices()[0] for shapes in shapess]
     vs = np.concatenate(vs, axis=0)
     map = make_map(env.padding, env.resolution, vertex=vs, sc=100.)
     map = compute_traversibility(
@@ -459,48 +451,50 @@ class MeshMapper(Building):
     self._preprocess_for_task(self.task_params.building_seed)
 
   def _preprocess_for_task(self, seed):
-    if self.task is None or self.task.seed != seed:
-      rng = np.random.RandomState(seed)
-      origin_loc = get_graph_origin_loc(rng, self.traversible)
-      self.task = utils.Foo(seed=seed, origin_loc=origin_loc,
-                            n_ori=self.task_params.n_ori)
-      G = generate_graph(self.valid_fn_vec,
-                                  self.task_params.step_size, self.task.n_ori,
-                                  (0, 0, 0))
-      gtG, nodes, nodes_to_id = convert_to_graph_tool(G)
-      self.task.gtG = gtG
-      self.task.nodes = nodes
-      self.task.delta_theta = 2.0*np.pi/(self.task.n_ori*1.)
-      self.task.nodes_to_id = nodes_to_id
-      logging.info('Building %s, #V=%d, #E=%d', self.building_name,
-                   self.task.nodes.shape[0], self.task.gtG.num_edges())
+    if self.task is not None and self.task.seed == seed:
+      return
+    rng = np.random.RandomState(seed)
+    origin_loc = get_graph_origin_loc(rng, self.traversible)
+    self.task = utils.Foo(seed=seed, origin_loc=origin_loc,
+                          n_ori=self.task_params.n_ori)
+    G = generate_graph(self.valid_fn_vec,
+                                self.task_params.step_size, self.task.n_ori,
+                                (0, 0, 0))
+    gtG, nodes, nodes_to_id = convert_to_graph_tool(G)
+    self.task.gtG = gtG
+    self.task.nodes = nodes
+    self.task.delta_theta = 2.0*np.pi/(self.task.n_ori*1.)
+    self.task.nodes_to_id = nodes_to_id
+    logging.info('Building %s, #V=%d, #E=%d', self.building_name,
+                 self.task.nodes.shape[0], self.task.gtG.num_edges())
 
-      if self.logdir is not None:
-        write_traversible = cv2.applyColorMap(self.traversible.astype(np.uint8)*255, cv2.COLORMAP_JET)
-        img_path = os.path.join(self.logdir,
-                                '{:s}_{:d}_graph.png'.format(self.building_name,
-                                                             seed))
-        node_xyt = self.to_actual_xyt_vec(self.task.nodes)
-        plt.set_cmap('jet');
-        fig, ax = utils.subplot(plt, (1,1), (12,12))
-        ax.plot(node_xyt[:,0], node_xyt[:,1], 'm.')
-        ax.imshow(self.traversible, origin='lower');
-        ax.set_axis_off(); ax.axis('equal');
-        ax.set_title('{:s}, {:d}, {:d}'.format(self.building_name,
-                                               self.task.nodes.shape[0],
-                                               self.task.gtG.num_edges()))
-        if self.room_dims is not None:
-          for i, r in enumerate(self.room_dims['dims']*1):
-            min_ = r[:3]*1
-            max_ = r[3:]*1
-            xmin, ymin, zmin = min_
-            xmax, ymax, zmax = max_
+    if self.logdir is not None:
+      write_traversible = cv2.applyColorMap(self.traversible.astype(np.uint8)*255, cv2.COLORMAP_JET)
+      img_path = os.path.join(self.logdir,
+                              '{:s}_{:d}_graph.png'.format(self.building_name,
+                                                           seed))
+      node_xyt = self.to_actual_xyt_vec(self.task.nodes)
+      plt.set_cmap('jet');
+      fig, ax = utils.subplot(plt, (1,1), (12,12))
+      ax.plot(node_xyt[:,0], node_xyt[:,1], 'm.')
+      ax.imshow(self.traversible, origin='lower');
+      ax.set_axis_off()
+      ax.axis('equal');
+      ax.set_title('{:s}, {:d}, {:d}'.format(self.building_name,
+                                             self.task.nodes.shape[0],
+                                             self.task.gtG.num_edges()))
+      if self.room_dims is not None:
+        for r in self.room_dims['dims']*1:
+          min_ = r[:3]*1
+          max_ = r[3:]*1
+          xmin, ymin, zmin = min_
+          xmax, ymax, zmax = max_
 
-            ax.plot([xmin, xmax, xmax, xmin, xmin],
-                    [ymin, ymin, ymax, ymax, ymin], 'g')
-        with fu.fopen(img_path, 'w') as f:
-          fig.savefig(f, bbox_inches='tight', transparent=True, pad_inches=0)
-        plt.close(fig)
+          ax.plot([xmin, xmax, xmax, xmin, xmin],
+                  [ymin, ymin, ymax, ymax, ymin], 'g')
+      with fu.fopen(img_path, 'w') as f:
+        fig.savefig(f, bbox_inches='tight', transparent=True, pad_inches=0)
+      plt.close(fig)
 
 
   def _gen_rng(self, rng):
@@ -514,7 +508,7 @@ class MeshMapper(Building):
       instances = []
       for instance_ in instances_:
         instance = instance_
-        for i in range(self.task_params.num_steps):
+        for _ in range(self.task_params.num_steps):
           instance.append(self.take_action([instance[-1]], [1])[0])
         instances.append(instance)
 
@@ -534,7 +528,7 @@ class MeshMapper(Building):
       instances = []
       for instance_ in instances_:
         instance = instance_
-        for i in range(self.task_params.n_ori-1):
+        for _ in range(self.task_params.n_ori-1):
           instance.append(self.take_action([instance[-1]], [1])[0])
         while len(instance) <= self.task_params.num_steps:
           while self.take_action([instance[-1]], [3])[0] == instance[-1] and len(instance) <= self.task_params.num_steps:
@@ -557,7 +551,7 @@ class MeshMapper(Building):
 
     # Make the instances be all the same length.
     for i in range(len(instances)):
-      for j in range(self.task_params.num_steps - len(instances[i]) + 1):
+      for _ in range(self.task_params.num_steps - len(instances[i]) + 1):
         instances[i].append(instances[i][-1])
       if perturbs[i].shape[0] < self.task_params.num_steps+1:
         p = np.zeros((self.task_params.num_steps+1, 4))
@@ -574,7 +568,8 @@ class MeshMapper(Building):
     instances_nodes = [tuple(x) for x in instances_nodes]
 
     imgs_ = self.render_nodes(instances_nodes, perturbs_)
-    imgs = []; next = 0;
+    imgs = []
+    next = 0;
     for instance in instances:
       img_i = []
       for _ in instance:
@@ -654,16 +649,17 @@ class MeshMapper(Building):
       cum_valid = np.reshape(np.array(cum_valid), cum_fs.shape)
 
 
-    inputs = {'fs_maps': fss,
-              'valid_maps': valids,
-              'imgs': imgs,
-              'loc_on_map': loc_on_map,
-              'theta_on_map': theta_on_map,
-              'cum_fs_maps': cum_fs,
-              'cum_valid_maps': cum_valid,
-              'incremental_thetas': incremental_thetas,
-              'incremental_locs': incremental_locs}
-    return inputs
+    return {
+        'fs_maps': fss,
+        'valid_maps': valids,
+        'imgs': imgs,
+        'loc_on_map': loc_on_map,
+        'theta_on_map': theta_on_map,
+        'cum_fs_maps': cum_fs,
+        'cum_valid_maps': cum_valid,
+        'incremental_thetas': incremental_thetas,
+        'incremental_locs': incremental_locs,
+    }
 
   def pre(self, inputs):
     inputs['imgs'] = image_pre(inputs['imgs'], self.task_params.modalities)
@@ -684,15 +680,14 @@ def _nav_env_reset_helper(type, rng, nodes, batch_size, gtG, max_dist,
     target_class = None
 
   elif type == 'room_to_room_many':
-    goal_node_ids = []; dists = [];
     node_room_ids = kwargs['node_room_ids']
     # Sample the first one
     start_node_ids_, end_node_ids_, dist_, _, _ = rng_room_to_room(
         batch_size, gtG, rng, max_dist, max_compute,
         node_room_ids=node_room_ids, nodes=nodes)
     start_node_ids = start_node_ids_
-    goal_node_ids.append(end_node_ids_)
-    dists.append(dist_)
+    goal_node_ids = [end_node_ids_]
+    dists = [dist_]
     for n in range(num_goals-1):
       start_node_ids_, end_node_ids_, dist_, _, _ = rng_next_goal(
           goal_node_ids[n], batch_size, gtG, rng, max_dist,
@@ -704,7 +699,8 @@ def _nav_env_reset_helper(type, rng, nodes, batch_size, gtG, max_dist,
 
   elif type == 'rng_rejection_sampling_many':
     num_goals = num_goals
-    goal_node_ids = []; dists = [];
+    goal_node_ids = []
+    dists = [];
 
     n_ori = kwargs['n_ori']
     step_size = kwargs['step_size']
@@ -715,8 +711,7 @@ def _nav_env_reset_helper(type, rng, nodes, batch_size, gtG, max_dist,
     distribution_bins = kwargs['distribution_bins']
 
     for n in range(num_goals):
-      if n == 0: input_nodes = None
-      else: input_nodes = goal_node_ids[n-1]
+      input_nodes = None if n == 0 else goal_node_ids[n-1]
       start_node_ids_, end_node_ids_, dist_, _, _, _, _ = rng_next_goal_rejection_sampling(
               input_nodes, batch_size, gtG, rng, max_dist, min_dist,
               max_compute, sampling_distribution, target_distribution, nodes,
@@ -826,10 +821,11 @@ class NavigationEnv(GridWorld, Building):
     plt.set_cmap('jet');
     fig, ax = utils.subplot(plt, (1,1), (12,12))
     ax.plot(node_xyt[:,0], node_xyt[:,1], 'm.')
-    ax.set_axis_off(); ax.axis('equal');
-    
+    ax.set_axis_off()
+    ax.axis('equal');
+
     if self.room_dims is not None:
-      for i, r in enumerate(self.room_dims['dims']*1):
+      for r in self.room_dims['dims']*1:
         min_ = r[:3]*1
         max_ = r[3:]*1
         xmin, ymin, zmin = min_
@@ -855,98 +851,99 @@ class NavigationEnv(GridWorld, Building):
 
   def _preprocess_for_task(self, seed):
     """Sets up the task field for doing navigation on the grid world."""
-    if self.task is None or self.task.seed != seed:
-      rng = np.random.RandomState(seed)
-      origin_loc = get_graph_origin_loc(rng, self.traversible)
-      self.task = utils.Foo(seed=seed, origin_loc=origin_loc,
-                            n_ori=self.task_params.n_ori)
-      G = generate_graph(self.valid_fn_vec, self.task_params.step_size,
-                         self.task.n_ori, (0, 0, 0))
-      gtG, nodes, nodes_to_id = convert_to_graph_tool(G)
-      self.task.gtG = gtG
-      self.task.nodes = nodes
-      self.task.delta_theta = 2.0*np.pi/(self.task.n_ori*1.)
-      self.task.nodes_to_id = nodes_to_id
+    if self.task is not None and self.task.seed == seed:
+      return
+    rng = np.random.RandomState(seed)
+    origin_loc = get_graph_origin_loc(rng, self.traversible)
+    self.task = utils.Foo(seed=seed, origin_loc=origin_loc,
+                          n_ori=self.task_params.n_ori)
+    G = generate_graph(self.valid_fn_vec, self.task_params.step_size,
+                       self.task.n_ori, (0, 0, 0))
+    gtG, nodes, nodes_to_id = convert_to_graph_tool(G)
+    self.task.gtG = gtG
+    self.task.nodes = nodes
+    self.task.delta_theta = 2.0*np.pi/(self.task.n_ori*1.)
+    self.task.nodes_to_id = nodes_to_id
 
-      logging.info('Building %s, #V=%d, #E=%d', self.building_name,
-                   self.task.nodes.shape[0], self.task.gtG.num_edges())
-      type = self.task_params.type
-      if type == 'general':
-        # Do nothing
-        _ = None
+    logging.info('Building %s, #V=%d, #E=%d', self.building_name,
+                 self.task.nodes.shape[0], self.task.gtG.num_edges())
+    type = self.task_params.type
+    if type == 'general':
+      # Do nothing
+      _ = None
 
-      elif type == 'room_to_room_many' or type == 'room_to_room_back':
-        if type == 'room_to_room_back':
-          assert(self.task_params.num_goals == 2), 'num_goals must be 2.'
+    elif type in ['room_to_room_many', 'room_to_room_back']:
+      if type == 'room_to_room_back':
+        assert(self.task_params.num_goals == 2), 'num_goals must be 2.'
 
-        self.room_dims = _filter_rooms(self.room_dims, self.task_params.room_regex)
-        xyt = self.to_actual_xyt_vec(self.task.nodes)
-        self.task.node_room_ids = _label_nodes_with_room_id(xyt, self.room_dims)
-        self.task.reset_kwargs = {'node_room_ids': self.task.node_room_ids}
+      self.room_dims = _filter_rooms(self.room_dims, self.task_params.room_regex)
+      xyt = self.to_actual_xyt_vec(self.task.nodes)
+      self.task.node_room_ids = _label_nodes_with_room_id(xyt, self.room_dims)
+      self.task.reset_kwargs = {'node_room_ids': self.task.node_room_ids}
 
-      elif type == 'rng_rejection_sampling_many':
-        n_bins = 20
-        rejection_sampling_M = self.task_params.rejection_sampling_M
-        min_dist = self.task_params.min_dist
-        bins = np.arange(n_bins+1)/(n_bins*1.)
-        target_d = np.zeros(n_bins); target_d[...] = 1./n_bins;
+    elif type == 'rng_rejection_sampling_many':
+      n_bins = 20
+      rejection_sampling_M = self.task_params.rejection_sampling_M
+      min_dist = self.task_params.min_dist
+      bins = np.arange(n_bins+1)/(n_bins*1.)
+      target_d = np.zeros(n_bins); target_d[...] = 1./n_bins;
 
-        sampling_d = get_hardness_distribution(
-            self.task.gtG, self.task_params.max_dist, self.task_params.min_dist,
-            np.random.RandomState(0), 4000, bins, self.task.nodes,
-            self.task_params.n_ori, self.task_params.step_size)
+      sampling_d = get_hardness_distribution(
+          self.task.gtG, self.task_params.max_dist, self.task_params.min_dist,
+          np.random.RandomState(0), 4000, bins, self.task.nodes,
+          self.task_params.n_ori, self.task_params.step_size)
 
-        self.task.reset_kwargs = {'distribution_bins': bins,
-                                  'target_distribution': target_d,
-                                  'sampling_distribution': sampling_d,
-                                  'rejection_sampling_M': rejection_sampling_M,
-                                  'n_bins': n_bins, 
-                                  'n_ori': self.task_params.n_ori,
-                                  'step_size': self.task_params.step_size,
-                                  'min_dist': self.task_params.min_dist}
-        self.task.n_bins = n_bins
-        self.task.distribution_bins = bins
-        self.task.target_distribution = target_d
-        self.task.sampling_distribution = sampling_d
-        self.task.rejection_sampling_M = rejection_sampling_M
-
-        if self.logdir is not None:
-          self._debug_save_hardness(seed)
-
-      elif type[:14] == 'to_nearest_obj':
-        self.room_dims = _filter_rooms(self.room_dims, self.task_params.room_regex)
-        xyt = self.to_actual_xyt_vec(self.task.nodes)
-
-        self.class_maps = _select_classes(self.class_maps,
-                                          self.class_map_names,
-                                          self.task_params.semantic_task.class_map_names)*1
-        self.class_map_names = self.task_params.semantic_task.class_map_names
-        nodes_xyt = self.to_actual_xyt_vec(np.array(self.task.nodes))
-
-        tt = utils.Timer(); tt.tic();
-        if self.task_params.type == 'to_nearest_obj_acc':
-          self.task.class_maps_dilated, self.task.node_class_label = label_nodes_with_class_geodesic(
-            nodes_xyt, self.class_maps,
-            self.task_params.semantic_task.pix_distance+8, self.map.traversible,
-            ff_cost=1., fo_cost=1., oo_cost=4., connectivity=8.)
-
-        dists = []
-        for i in range(len(self.class_map_names)):
-          class_nodes_ = np.where(self.task.node_class_label[:,i])[0]
-          dists.append(get_distance_node_list(gtG, source_nodes=class_nodes_, direction='to'))
-        self.task.dist_to_class = dists
-        a_, b_ = np.where(self.task.node_class_label)
-        self.task.class_nodes = np.concatenate((a_[:,np.newaxis], b_[:,np.newaxis]), axis=1)
-        
-        if self.logdir is not None:
-          self._debug_semantic_maps(seed)
-        
-        self.task.reset_kwargs = {'sampling': self.task_params.semantic_task.sampling,
-                                  'class_nodes': self.task.class_nodes,
-                                  'dist_to_class': self.task.dist_to_class}
+      self.task.reset_kwargs = {'distribution_bins': bins,
+                                'target_distribution': target_d,
+                                'sampling_distribution': sampling_d,
+                                'rejection_sampling_M': rejection_sampling_M,
+                                'n_bins': n_bins, 
+                                'n_ori': self.task_params.n_ori,
+                                'step_size': self.task_params.step_size,
+                                'min_dist': self.task_params.min_dist}
+      self.task.n_bins = n_bins
+      self.task.distribution_bins = bins
+      self.task.target_distribution = target_d
+      self.task.sampling_distribution = sampling_d
+      self.task.rejection_sampling_M = rejection_sampling_M
 
       if self.logdir is not None:
-        self._debug_save_map_nodes(seed)
+        self._debug_save_hardness(seed)
+
+    elif type[:14] == 'to_nearest_obj':
+      self.room_dims = _filter_rooms(self.room_dims, self.task_params.room_regex)
+      xyt = self.to_actual_xyt_vec(self.task.nodes)
+
+      self.class_maps = _select_classes(self.class_maps,
+                                        self.class_map_names,
+                                        self.task_params.semantic_task.class_map_names)*1
+      self.class_map_names = self.task_params.semantic_task.class_map_names
+      nodes_xyt = self.to_actual_xyt_vec(np.array(self.task.nodes))
+
+      tt = utils.Timer(); tt.tic();
+      if self.task_params.type == 'to_nearest_obj_acc':
+        self.task.class_maps_dilated, self.task.node_class_label = label_nodes_with_class_geodesic(
+          nodes_xyt, self.class_maps,
+          self.task_params.semantic_task.pix_distance+8, self.map.traversible,
+          ff_cost=1., fo_cost=1., oo_cost=4., connectivity=8.)
+
+      dists = []
+      for i in range(len(self.class_map_names)):
+        class_nodes_ = np.where(self.task.node_class_label[:,i])[0]
+        dists.append(get_distance_node_list(gtG, source_nodes=class_nodes_, direction='to'))
+      self.task.dist_to_class = dists
+      a_, b_ = np.where(self.task.node_class_label)
+      self.task.class_nodes = np.concatenate((a_[:,np.newaxis], b_[:,np.newaxis]), axis=1)
+
+      if self.logdir is not None:
+        self._debug_semantic_maps(seed)
+
+      self.task.reset_kwargs = {'sampling': self.task_params.semantic_task.sampling,
+                                'class_nodes': self.task.class_nodes,
+                                'dist_to_class': self.task.dist_to_class}
+
+    if self.logdir is not None:
+      self._debug_save_map_nodes(seed)
 
   def reset(self, rngs):
     rng = rngs[0]; rng_perturb = rngs[1];

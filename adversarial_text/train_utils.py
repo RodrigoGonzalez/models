@@ -100,8 +100,7 @@ def run_training(train_op,
 def maybe_restore_pretrained_model(sess, saver_for_restore, model_dir):
   """Restores pretrained model if there is no ckpt model."""
   ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
-  checkpoint_exists = ckpt and ckpt.model_checkpoint_path
-  if checkpoint_exists:
+  if checkpoint_exists := ckpt and ckpt.model_checkpoint_path:
     tf.logging.info('Checkpoint exists in FLAGS.train_dir; skipping '
                     'pretraining restore')
     return
@@ -109,7 +108,7 @@ def maybe_restore_pretrained_model(sess, saver_for_restore, model_dir):
   pretrain_ckpt = tf.train.get_checkpoint_state(model_dir)
   if not (pretrain_ckpt and pretrain_ckpt.model_checkpoint_path):
     raise ValueError(
-        'Asked to restore model from %s but no checkpoint found.' % model_dir)
+        f'Asked to restore model from {model_dir} but no checkpoint found.')
   saver_for_restore.restore(sess, pretrain_ckpt.model_checkpoint_path)
 
 

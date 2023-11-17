@@ -101,13 +101,13 @@ def create_model(hparams,
   ####################
 
   with slim.arg_scope(
-      [slim.conv2d, slim.conv2d_transpose, slim.fully_connected],
-      normalizer_params=batch_norm_params(is_training,
-                                          hparams.batch_norm_decay),
-      weights_initializer=tf.random_normal_initializer(
-          stddev=hparams.normal_init_std),
-      weights_regularizer=tf.contrib.layers.l2_regularizer(
-          hparams.weight_decay)):
+        [slim.conv2d, slim.conv2d_transpose, slim.fully_connected],
+        normalizer_params=batch_norm_params(is_training,
+                                            hparams.batch_norm_decay),
+        weights_initializer=tf.random_normal_initializer(
+            stddev=hparams.normal_init_std),
+        weights_regularizer=tf.contrib.layers.l2_regularizer(
+            hparams.weight_decay)):
     with slim.arg_scope([slim.conv2d], padding='SAME'):
       if hparams.arch == 'dcgan':
         end_points = dcgan(
@@ -133,8 +133,9 @@ def create_model(hparams,
         # Used to calculate baseline numbers
         # Also set `generator_steps=0` for baseline
         if hparams.generator_steps:
-          raise ValueError('Must set generator_steps=0 for identity arch. Is %s'
-                           % hparams.generator_steps)
+          raise ValueError(
+              f'Must set generator_steps=0 for identity arch. Is {hparams.generator_steps}'
+          )
         transferred_images = source_images
         source_channels = source_images.shape.as_list()[-1]
         target_channels = target_images.shape.as_list()[-1]
@@ -144,7 +145,7 @@ def create_model(hparams,
           transferred_images = tf.image.rgb_to_grayscale(source_images)
         end_points = {'transferred_images': transferred_images}
       else:
-        raise ValueError('Unknown architecture: %s' % hparams.arch)
+        raise ValueError(f'Unknown architecture: {hparams.arch}')
 
       #####################
       # Domain Classifier #
@@ -202,7 +203,7 @@ def create_model(hparams,
                     private_scope='transferred_task_classifier',
                     reuse_shared=True)
   # Remove any endpoints with None values
-  return dict((k, v) for k, v in end_points.iteritems() if v is not None)
+  return {k: v for k, v in end_points.iteritems() if v is not None}
 
 
 def batch_norm_params(is_training, batch_norm_decay):
@@ -253,7 +254,7 @@ def upsample(net, num_filters, scale=2, method='resize_conv', scope=None):
     elif method == 'conv2d_transpose':
       return slim.conv2d_transpose(net, num_filters, scope='deconv')
     else:
-      raise ValueError('Upsample method [%s] was not recognized.' % method)
+      raise ValueError(f'Upsample method [{method}] was not recognized.')
 
 
 def project_latent_vars(hparams, proj_shape, latent_vars, combine_method='sum'):
@@ -295,7 +296,7 @@ def project_latent_vars(hparams, proj_shape, latent_vars, combine_method='sum'):
     # Concatenate along last axis
     result = tf.concat(values, len(proj_shape))
   else:
-    raise ValueError('Unknown combine_method %s' % combine_method)
+    raise ValueError(f'Unknown combine_method {combine_method}')
 
   tf.logging.info('Latent variables projected to size %s volume', result.shape)
 
@@ -338,14 +339,14 @@ def resnet_stack(images, output_shape, hparams, scope=None):
   if hparams.noise_channel:
     # separate the noise for visualization
     end_points['noise'] = images[:, :, :, -1]
-  assert images.shape.as_list()[1:3] == output_shape[0:2]
+  assert images.shape.as_list()[1:3] == output_shape[:2]
 
   with tf.variable_scope(scope, 'resnet_style_transfer', [images]):
     with slim.arg_scope(
-        [slim.conv2d],
-        normalizer_fn=slim.batch_norm,
-        kernel_size=[hparams.generator_kernel_size] * 2,
-        stride=1):
+            [slim.conv2d],
+            normalizer_fn=slim.batch_norm,
+            kernel_size=[hparams.generator_kernel_size] * 2,
+            stride=1):
       net = slim.conv2d(
           images,
           hparams.resnet_filters,
@@ -353,7 +354,7 @@ def resnet_stack(images, output_shape, hparams, scope=None):
           activation_fn=tf.nn.relu)
       for block in range(hparams.resnet_blocks):
         net = resnet_block(net, hparams)
-        end_points['resnet_block_{}'.format(block)] = net
+        end_points[f'resnet_block_{block}'] = net
 
       net = slim.conv2d(
           net,
@@ -387,11 +388,11 @@ def predict_domain(images,
   with tf.variable_scope(scope, 'discriminator', [images], reuse=reuse):
     lrelu_partial = functools.partial(lrelu, leakiness=hparams.lrelu_leakiness)
     with slim.arg_scope(
-        [slim.conv2d],
-        kernel_size=[hparams.discriminator_kernel_size] * 2,
-        activation_fn=lrelu_partial,
-        stride=2,
-        normalizer_fn=slim.batch_norm):
+            [slim.conv2d],
+            kernel_size=[hparams.discriminator_kernel_size] * 2,
+            activation_fn=lrelu_partial,
+            stride=2,
+            normalizer_fn=slim.batch_norm):
 
       def add_noise(hidden, scope_num=None):
         if scope_num:
@@ -399,7 +400,8 @@ def predict_domain(images,
               hidden,
               hparams.discriminator_dropout_keep_prob,
               is_training=is_training,
-              scope='dropout_%s' % scope_num)
+              scope=f'dropout_{scope_num}',
+          )
         if hparams.discriminator_noise_stddev == 0:
           return hidden
         return hidden + tf.random_normal(
@@ -416,7 +418,8 @@ def predict_domain(images,
           hparams.num_discriminator_filters,
           normalizer_fn=None,
           stride=hparams.discriminator_first_stride,
-          scope='conv1_stride%s' % hparams.discriminator_first_stride)
+          scope=f'conv1_stride{hparams.discriminator_first_stride}',
+      )
       net = add_noise(net, 1)
 
       block_id = 2
@@ -428,19 +431,18 @@ def predict_domain(images,
         num_filters = int(hparams.num_discriminator_filters *
                           (hparams.discriminator_filter_factor**(block_id - 1)))
         for conv_id in range(1, hparams.discriminator_conv_block_size):
-          net = slim.conv2d(
-              net,
-              num_filters,
-              stride=1,
-              scope='conv_%s_%s' % (block_id, conv_id))
+          net = slim.conv2d(net,
+                            num_filters,
+                            stride=1,
+                            scope=f'conv_{block_id}_{conv_id}')
         if hparams.discriminator_do_pooling:
-          net = slim.conv2d(
-              net, num_filters, scope='conv_%s_prepool' % block_id)
-          net = slim.avg_pool2d(
-              net, kernel_size=[2, 2], stride=2, scope='pool_%s' % block_id)
+          net = slim.conv2d(net, num_filters, scope=f'conv_{block_id}_prepool')
+          net = slim.avg_pool2d(net,
+                                kernel_size=[2, 2],
+                                stride=2,
+                                scope=f'pool_{block_id}')
         else:
-          net = slim.conv2d(
-              net, num_filters, scope='conv_%s_stride2' % block_id)
+          net = slim.conv2d(net, num_filters, scope=f'conv_{block_id}_stride2')
         net = add_noise(net, block_id)
         block_id += 1
       net = slim.flatten(net)
@@ -487,9 +489,9 @@ def dcgan_generator(images, output_shape, hparams, scope=None):
   num_iterations = int(math.ceil(math.log(float(outdim) / float(indim), 2.0)))
 
   with slim.arg_scope(
-      [slim.conv2d, slim.conv2d_transpose],
-      kernel_size=[hparams.generator_kernel_size] * 2,
-      stride=2):
+        [slim.conv2d, slim.conv2d_transpose],
+        kernel_size=[hparams.generator_kernel_size] * 2,
+        stride=2):
     with tf.variable_scope(scope or 'generator'):
 
       net = images
@@ -497,7 +499,7 @@ def dcgan_generator(images, output_shape, hparams, scope=None):
       # Repeatedly halve # filters until = hparams.decode_filters in last layer
       for i in range(num_iterations):
         num_filters = hparams.num_decoder_filters * 2**(num_iterations - i - 1)
-        net = slim.conv2d_transpose(net, num_filters, scope='deconv_%s' % i)
+        net = slim.conv2d_transpose(net, num_filters, scope=f'deconv_{i}')
 
       # Crop down to desired size (e.g. 32x32 -> 28x28)
       dif = net.shape.as_list()[1] - outdim
@@ -673,8 +675,6 @@ def simple_generator(source_images, target_images, is_training, hparams,
           combine_method='concat')
       feed_source_images = tf.concat([source_images, projected_latent], 3)
 
-    end_points = {}
-
     ###################################################
     # Transfer the source images to the target style. #
     ###################################################
@@ -708,6 +708,5 @@ def simple_generator(source_images, target_images, is_training, hparams,
 
     transferred_images = net
     assert transferred_images.shape.as_list() == target_images.shape.as_list()
-    end_points['transferred_images'] = transferred_images
-
+    end_points = {'transferred_images': transferred_images}
   return end_points

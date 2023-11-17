@@ -95,7 +95,7 @@ def get_repr_from_image(images_reshaped, modalities, data_augment, encoder,
       y = d_image[...,1]
       d_image = tf.concat([tf.expand_dims(x, -1), tf.expand_dims(y, -1)], 3)
       x = d_image
-    scope_name = 'd_'+encoder
+    scope_name = f'd_{encoder}'
 
   resnet_is_training = is_training and (not freeze_conv)
   with slim.arg_scope(resnet_v2.resnet_utils.resnet_arg_scope(resnet_is_training)):
@@ -111,24 +111,26 @@ def get_repr_from_image(images_reshaped, modalities, data_augment, encoder,
 def default_train_step_kwargs(m, obj, logdir, rng_seed, is_chief, num_steps,
                               iters, train_display_interval,
                               dagger_sample_bn_false):
-  train_step_kwargs = {}
-  train_step_kwargs['obj'] = obj 
-  train_step_kwargs['m'] = m
-  
-  # rng_data has 2 independent rngs, one for sampling episodes and one for
-  # sampling perturbs (so that we can make results reproducible.
-  train_step_kwargs['rng_data'] = [np.random.RandomState(rng_seed), 
-                                   np.random.RandomState(rng_seed)]
+  train_step_kwargs = {
+      'obj':
+      obj,
+      'm':
+      m,
+      'rng_data': [
+          np.random.RandomState(rng_seed),
+          np.random.RandomState(rng_seed),
+      ],
+  }
   train_step_kwargs['rng_action'] = np.random.RandomState(rng_seed)
   if is_chief: 
     train_step_kwargs['writer'] = tf.summary.FileWriter(logdir) #, m.tf_graph)
   else:
     train_step_kwargs['writer'] = None
   train_step_kwargs['iters'] = iters
-  train_step_kwargs['train_display_interval'] = train_display_interval 
+  train_step_kwargs['train_display_interval'] = train_display_interval
   train_step_kwargs['num_steps'] = num_steps
   train_step_kwargs['logdir'] = logdir
-  train_step_kwargs['dagger_sample_bn_false'] = dagger_sample_bn_false 
+  train_step_kwargs['dagger_sample_bn_false'] = dagger_sample_bn_false
   return train_step_kwargs
 
 # Utilities for visualizing and analysing validation output.
@@ -218,7 +220,7 @@ def eval_dist(outputs, global_step, output_dir, metric_summary, N):
   SUCCESS_THRESH = 3
   if N >= 0:
     outputs = outputs[:N]
-  
+
   # Plot distance at time t.
   d_at_t = []
   for i in range(len(outputs)):
@@ -253,8 +255,10 @@ def eval_dist(outputs, global_step, output_dir, metric_summary, N):
   d_ends = np.concatenate(d_ends, axis=0)
   axes.plot(d_inits+np.random.rand(*(d_inits.shape))-0.5,
             d_ends+np.random.rand(*(d_ends.shape))-0.5, '.', mec='red', mew=1.0)
-  axes.set_xlabel('init dist'); axes.set_ylabel('final dist'); 
-  axes.grid('on'); axes.axis('equal');
+  axes.set_xlabel('init dist')
+  axes.set_ylabel('final dist');
+  axes.grid('on')
+  axes.axis('equal');
   title_str = 'mean: {:0.1f}, 50: {:0.1f}, 75: {:0.2f}, s: {:0.1f}'
   title_str = title_str.format(
       np.mean(d_ends), np.median(d_ends), np.percentile(d_ends, q=75),
@@ -273,14 +277,15 @@ def eval_dist(outputs, global_step, output_dir, metric_summary, N):
   with plt.style.context('seaborn-white'):
     d_ends_ = np.sort(d_ends)
     d_inits_ = np.sort(d_inits)
-    leg = [];
     fig, ax = utils.subplot(plt, (1,1), (5,5))
     ax.grid('on')
-    ax.set_xlabel('Distance from goal'); ax.xaxis.label.set_fontsize(16);
-    ax.set_ylabel('Fraction of data'); ax.yaxis.label.set_fontsize(16);
+    ax.set_xlabel('Distance from goal')
+    ax.xaxis.label.set_fontsize(16);
+    ax.set_ylabel('Fraction of data')
+    ax.yaxis.label.set_fontsize(16);
     ax.plot(d_ends_, np.arange(d_ends_.size)*1./d_ends_.size, 'r')
     ax.plot(d_inits_, np.arange(d_inits_.size)*1./d_inits_.size, 'k')
-    leg.append('Final'); leg.append('Init');
+    leg = ['Final', 'Init']
     ax.legend(leg, fontsize='x-large');
     ax.set_axis_on()
     title_str = 'mean: {:0.1f}, 50: {:0.1f}, 75: {:0.2f}, s: {:0.1f}'
@@ -291,7 +296,7 @@ def eval_dist(outputs, global_step, output_dir, metric_summary, N):
     file_name = os.path.join(output_dir, 'dist_hist_{:d}.png'.format(global_step))
     with fu.fopen(file_name, 'w') as f:
       fig.savefig(f, bbox_inches='tight', transparent=True, pad_inches=0)
-  
+
   # Log distance metrics.
   tf_utils.add_value_to_summary(metric_summary, 'dists/success_init: ',
                                 100*(np.mean(d_inits <= SUCCESS_THRESH)))
@@ -341,25 +346,20 @@ def plot_trajectories(outputs, global_step, output_dir, metric_summary, N):
       for k in range(goal_loc.shape[1]):
         if not is_semantic:
           ax.plot(goal_loc[j,k,0], goal_loc[j,k,1], 's')
-      if False:
-        ax.plot(locs[j,:,0], locs[j,:,1], 'r.', ms=3)
-        ax.imshow(orig_maps[j,0,:,:,0], origin='lower')
-        ax.set_axis_off();
+      ax.scatter(locs[j,:,0], locs[j,:,1], c=np.arange(locs.shape[1]),
+                 cmap='jet', s=10, lw=0)
+      ax.imshow(orig_maps[j,0,:,:,0], origin='lower', vmin=-1.0, vmax=2.0)
+      if not is_semantic:
+        xymin = np.minimum(np.min(goal_loc[j,:,:], axis=0), np.min(locs[j,:,:], axis=0))
+        xymax = np.maximum(np.max(goal_loc[j,:,:], axis=0), np.max(locs[j,:,:], axis=0))
       else:
-        ax.scatter(locs[j,:,0], locs[j,:,1], c=np.arange(locs.shape[1]),
-                   cmap='jet', s=10, lw=0)
-        ax.imshow(orig_maps[j,0,:,:,0], origin='lower', vmin=-1.0, vmax=2.0)
-        if not is_semantic:
-          xymin = np.minimum(np.min(goal_loc[j,:,:], axis=0), np.min(locs[j,:,:], axis=0))
-          xymax = np.maximum(np.max(goal_loc[j,:,:], axis=0), np.max(locs[j,:,:], axis=0))
-        else:
-          xymin = np.min(locs[j,:,:], axis=0)
-          xymax = np.max(locs[j,:,:], axis=0)
-        xy1 = (xymax+xymin)/2. - np.maximum(np.max(xymax-xymin), 12)
-        xy2 = (xymax+xymin)/2. + np.maximum(np.max(xymax-xymin), 12)
-        ax.set_xlim([xy1[0], xy2[0]])
-        ax.set_ylim([xy1[1], xy2[1]])
-        ax.set_axis_off()
+        xymin = np.min(locs[j,:,:], axis=0)
+        xymax = np.max(locs[j,:,:], axis=0)
+      xy1 = (xymax+xymin)/2. - np.maximum(np.max(xymax-xymin), 12)
+      xy2 = (xymax+xymin)/2. + np.maximum(np.max(xymax-xymin), 12)
+      ax.set_xlim([xy1[0], xy2[0]])
+      ax.set_ylim([xy1[1], xy2[1]])
+      ax.set_axis_off()
   file_name = os.path.join(output_dir, 'trajectory_{:d}.png'.format(global_step))
   with fu.fopen(file_name, 'w') as f:
     fig.savefig(f, bbox_inches='tight', transparent=True, pad_inches=0)
@@ -369,11 +369,14 @@ def plot_trajectories(outputs, global_step, output_dir, metric_summary, N):
 def add_default_summaries(mode, arop_full_summary_iters, summarize_ops,
                           summarize_names, to_aggregate, action_prob_op,
                           input_tensors, scope_name):
-  assert(mode == 'train' or mode == 'val' or mode == 'test'), \
-    'add_default_summaries mode is neither train or val or test.'
-  
+  assert mode in [
+      'train',
+      'val',
+      'test',
+  ], 'add_default_summaries mode is neither train or val or test.'
+
   s_ops = tf_utils.get_default_summary_ops()
-  
+
   if mode == 'train':
     s_ops.summary_ops, s_ops.print_summary_ops, additional_return_ops, \
     arop_summary_iters, arop_eval_fns = tf_utils.simple_summaries(
@@ -390,7 +393,7 @@ def add_default_summaries(mode, arop_full_summary_iters, summarize_ops,
     s_ops.additional_return_ops += additional_return_ops
     s_ops.arop_summary_iters += arop_summary_iters
     s_ops.arop_eval_fns += arop_eval_fns
-  
+
   elif mode == 'test':
     s_ops.summary_ops, s_ops.print_summary_ops, additional_return_ops, \
     arop_summary_iters, arop_eval_fns = tf_utils.simple_summaries(
@@ -399,7 +402,7 @@ def add_default_summaries(mode, arop_full_summary_iters, summarize_ops,
     s_ops.arop_summary_iters += arop_summary_iters
     s_ops.arop_eval_fns += arop_eval_fns
 
-  
+
   if mode == 'val':
     arop = s_ops.additional_return_ops
     arop += [[action_prob_op, input_tensors['train']['action']]]
@@ -412,7 +415,7 @@ def add_default_summaries(mode, arop_full_summary_iters, summarize_ops,
     s_ops.arop_summary_iters += [-1, arop_full_summary_iters,
                                  arop_full_summary_iters]
     s_ops.arop_eval_fns += [eval_ap, eval_dist, plot_trajectories]
-  
+
   elif mode == 'test':
     arop = s_ops.additional_return_ops
     arop += [[input_tensors['step']['loc_on_map'],

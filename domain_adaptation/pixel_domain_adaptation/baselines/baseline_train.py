@@ -91,7 +91,7 @@ def main(unused_argv):
   if FLAGS.dataset_name in ['mnist', 'mnist_m', 'usps']:
     hparams.task_tower = 'mnist'
   else:
-    raise ValueError('Unknown dataset %s' % FLAGS.dataset_name)
+    raise ValueError(f'Unknown dataset {FLAGS.dataset_name}')
 
   with tf.Graph().as_default():
     with tf.device(

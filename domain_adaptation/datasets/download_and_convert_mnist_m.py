@@ -103,7 +103,7 @@ def _convert_dataset(split_name, filenames, filename_to_class_id, dataset_dir):
       (integers).
     dataset_dir: The directory where the converted datasets are stored.
   """
-  print('Converting the {} split.'.format(split_name))
+  print(f'Converting the {split_name} split.')
   # Train and validation splits are both in the train directory.
   if split_name in ['train', 'valid']:
     png_directory = os.path.join(dataset_dir, 'mnist_m', 'mnist_m_train')
@@ -161,7 +161,7 @@ def _get_output_filename(dataset_dir, split_name):
   Returns:
     An absolute file path.
   """
-  return '%s/mnist_m_%s.tfrecord' % (dataset_dir, split_name)
+  return f'{dataset_dir}/mnist_m_{split_name}.tfrecord'
 
 
 def _get_filenames(dataset_dir):
@@ -173,10 +173,7 @@ def _get_filenames(dataset_dir):
   Returns:
     A list of image file paths, relative to `dataset_dir`.
   """
-  photo_filenames = []
-  for filename in os.listdir(dataset_dir):
-    photo_filenames.append(filename)
-  return photo_filenames
+  return list(os.listdir(dataset_dir))
 
 
 def run(dataset_dir):

@@ -96,19 +96,18 @@ def documents(dataset='train',
   random.seed(302)
 
   ds = FLAGS.dataset
-  if ds == 'imdb':
-    docs_gen = imdb_documents
-  elif ds == 'dbpedia':
+  if ds == 'dbpedia':
     docs_gen = dbpedia_documents
+  elif ds == 'imdb':
+    docs_gen = imdb_documents
   elif ds == 'rcv1':
     docs_gen = rcv1_documents
   elif ds == 'rt':
     docs_gen = rt_documents
   else:
-    raise ValueError('Unrecognized dataset %s' % FLAGS.dataset)
+    raise ValueError(f'Unrecognized dataset {FLAGS.dataset}')
 
-  for doc in docs_gen(dataset, include_unlabeled, include_validation):
-    yield doc
+  yield from docs_gen(dataset, include_unlabeled, include_validation)
 
 
 def tokens(doc):
@@ -137,9 +136,7 @@ def tokens(doc):
     content = content.lower()
 
   if FLAGS.output_char:
-    for char in content:
-      yield char
-
+    yield from content
   else:
     tokens_ = data_utils.split_by_punct(content)
     for i, token in enumerate(tokens_):
@@ -148,11 +145,9 @@ def tokens(doc):
 
       if FLAGS.output_bigrams:
         previous_token = (tokens_[i - 1] if i > 0 else data_utils.EOS_TOKEN)
-        bigram = '_'.join([previous_token, token])
-        yield bigram
+        yield '_'.join([previous_token, token])
         if (i + 1) == len(tokens_):
-          bigram = '_'.join([token, data_utils.EOS_TOKEN])
-          yield bigram
+          yield '_'.join([token, data_utils.EOS_TOKEN])
 
 
 def imdb_documents(dataset='train',
@@ -189,7 +184,7 @@ def imdb_documents(dataset='train',
                     file_idx >= FLAGS.imdb_validation_neg_start_id)
     return is_pos_valid or is_neg_valid
 
-  dirs = [(dataset + '/pos', True), (dataset + '/neg', False)]
+  dirs = [(f'{dataset}/pos', True), (f'{dataset}/neg', False)]
   if include_unlabeled:
     dirs.append(('train/unsup', None))
 
@@ -246,7 +241,7 @@ def dbpedia_documents(dataset='train',
 
   tf.logging.info('Generating DBpedia documents...')
 
-  with open(os.path.join(FLAGS.dbpedia_input_dir, dataset + '.csv')) as db_f:
+  with open(os.path.join(FLAGS.dbpedia_input_dir, f'{dataset}.csv')) as db_f:
     reader = csv.reader(db_f)
     for row in reader:
       # 10% of the data is randomly held out
@@ -254,7 +249,7 @@ def dbpedia_documents(dataset='train',
       if is_validation and not include_validation:
         continue
 
-      content = row[1] + ' ' + row[2]
+      content = f'{row[1]} {row[2]}'
       yield Document(
           content=content,
           is_validation=is_validation,
@@ -297,7 +292,7 @@ def rcv1_documents(dataset='train',
     if dataset == 'train':
       datasets.append('unlab')
   for dset in datasets:
-    with open(os.path.join(FLAGS.rcv1_input_dir, dset + '.csv')) as db_f:
+    with open(os.path.join(FLAGS.rcv1_input_dir, f'{dset}.csv')) as db_f:
       reader = csv.reader(db_f)
       for row in reader:
         # 10% of the data is randomly held out

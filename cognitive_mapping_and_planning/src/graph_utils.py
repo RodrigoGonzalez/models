@@ -77,7 +77,7 @@ def add_diagonal_edges(g, nodes, sz_x, sz_y, edge_len):
 
 def convert_traversible_to_graph(traversible, ff_cost=1., fo_cost=1.,
                                  oo_cost=1., connectivity=4):
-  assert(connectivity == 4 or connectivity == 8)
+  assert connectivity in [4, 8]
 
   sz_x = traversible.shape[1]
   sz_y = traversible.shape[0]
@@ -160,13 +160,6 @@ def label_nodes_with_class_geodesic(nodes_xyt, class_maps, pix, traversible,
 
   class_dist = np.zeros_like(class_maps*1.)
   n_classes = class_maps.shape[2]
-  if False:
-    # Assign each pixel to a class based on number of points.
-    selem = skimage.morphology.disk(pix)
-    class_maps_ = class_maps*1.
-    class_maps__ = np.argmax(class_maps_, axis=2)
-    class_maps__[np.max(class_maps_, axis=2) == 0] = -1
-
   # Label nodes with classes.
   for i in range(n_classes):
     # class_node_ids = np.where(class_maps__.ravel() == i)[0]
@@ -185,10 +178,9 @@ def label_nodes_with_class_geodesic(nodes_xyt, class_maps, pix, traversible,
   return class_map_geodesic, node_class_label
 
 def _get_next_nodes_undirected(n, sc, n_ori):
-  nodes_to_add = []
   nodes_to_validate = []
   (p, q, r) = n
-  nodes_to_add.append((n, (p, q, r), 0))
+  nodes_to_add = [(n, (p, q, r), 0)]
   if n_ori == 4:
     for _ in [1, 2, 3, 4]:
       if _ == 1:
@@ -203,13 +195,19 @@ def _get_next_nodes_undirected(n, sc, n_ori):
   return nodes_to_add, nodes_to_validate
 
 def _get_next_nodes(n, sc, n_ori):
-  nodes_to_add = []
-  nodes_to_validate = []
   (p, q, r) = n
-  for r_, a_ in zip([-1, 0, 1], [1, 0, 2]):
-    nodes_to_add.append((n, (p, q, np.mod(r+r_, n_ori)), a_))
-
-  if n_ori == 6:
+  nodes_to_add = [(n, (p, q, np.mod(r + r_, n_ori)), a_)
+                  for r_, a_ in zip([-1, 0, 1], [1, 0, 2])]
+  if n_ori == 4:
+    if r == 0:
+      v = (p + sc, q, r)
+    elif r == 1:
+      v = (p, q + sc, r)
+    elif r == 2:
+      v = (p - sc, q, r)
+    elif r == 3:
+      v = (p, q - sc, r)
+  elif n_ori == 6:
     if r == 0:
       v = (p + sc, q, r)
     elif r == 1:
@@ -222,25 +220,14 @@ def _get_next_nodes(n, sc, n_ori):
       v = (p - sc, q - sc, r)
     elif r == 5:
       v = (p, q - sc, r)
-  elif n_ori == 4:
-    if r == 0:
-      v = (p + sc, q, r)
-    elif r == 1:
-      v = (p, q + sc, r)
-    elif r == 2:
-      v = (p - sc, q, r)
-    elif r == 3:
-      v = (p, q - sc, r)
-  nodes_to_validate.append((n,v,3))
-
+  nodes_to_validate = [(n, v, 3)]
   return nodes_to_add, nodes_to_validate
 
 def generate_graph(valid_fn_vec=None, sc=1., n_ori=6,
                    starting_location=(0, 0, 0), vis=False, directed=True):
   timer = utils.Timer()
   timer.tic()
-  if directed: G = nx.DiGraph(directed=True)
-  else: G = nx.Graph()
+  G = nx.DiGraph(directed=True) if directed else nx.Graph()
   G.add_node(starting_location)
   new_nodes = G.nodes()
   while len(new_nodes) != 0:
@@ -288,7 +275,7 @@ def vis_G(G, ax, vertex_color='r', edge_color='b', r=None):
     x = XYT[-3]
     y = XYT[-2]
     t = XYT[-1]
-    ax.plot(x, y, vertex_color + '.')
+    ax.plot(x, y, f'{vertex_color}.')
 
 def convert_to_graph_tool(G):
   timer = utils.Timer()
@@ -321,7 +308,7 @@ def _rejection_sampling(rng, sampling_d, target_d, bins, hardness, M):
   i = 0
   ratio = target_d[bin_ind] / (M*sampling_d[bin_ind])
   while i < ratio.size and rng.rand() > ratio[i]:
-    i = i+1
+    i += 1
   return i
 
 def heuristic_fn_vec(n1, n2, n_ori, step_size):
@@ -333,10 +320,7 @@ def heuristic_fn_vec(n1, n2, n_ori, step_size):
   dt = np.minimum(dt, n_ori-dt)
 
   if n_ori == 6:
-    if dx*dy > 0:
-      d = np.maximum(np.abs(dx), np.abs(dy))
-    else:
-      d = np.abs(dy-dx)
+    d = np.maximum(np.abs(dx), np.abs(dy)) if dx*dy > 0 else np.abs(dy-dx)
   elif n_ori == 4:
     d = np.abs(dx) + np.abs(dy)
 
@@ -347,8 +331,9 @@ def get_hardness_distribution(gtG, max_dist, min_dist, rng, trials, bins, nodes,
   heuristic_fn = lambda node_ids, node_id: \
     heuristic_fn_vec(nodes[node_ids, :], nodes[[node_id], :], n_ori, step_size)
   num_nodes = gtG.num_vertices()
-  gt_dists = []; h_dists = [];
-  for i in range(trials):
+  gt_dists = []
+  h_dists = [];
+  for _ in range(trials):
     end_node_id = rng.choice(num_nodes)
     gt_dist = gt.topology.shortest_distance(gt.GraphView(gtG, reversed=True),
                                             source=gtG.vertex(end_node_id),
@@ -422,11 +407,14 @@ def rng_next_goal(start_node_ids, batch_size, gtG, rng, max_dist,
   # Compute the distance field from the starting location, and then pick a
   # destination in another room if possible otherwise anywhere outside this
   # room.
-  dists = []; pred_maps = []; paths = []; end_node_ids = [];
+  dists = []
+  pred_maps = []
+  paths = []
+  end_node_ids = [];
   for i in range(batch_size):
     room_id = node_room_ids[start_node_ids[i]]
     # Compute distances.
-    if dists_from_start_node == None:
+    if dists_from_start_node is None:
       dist, pred_map = gt.topology.shortest_distance(
         gt.GraphView(gtG, reversed=False), source=gtG.vertex(start_node_ids[i]),
         target=None, max_dist=max_dist_to_compute, pred_map=True)
@@ -467,7 +455,7 @@ def rng_next_goal(start_node_ids, batch_size, gtG, rng, max_dist,
     if compute_path:
       path = get_path_ids(start_node_ids[i], end_node_ids[i], pred_map)
     paths.append(path)
-  
+
   return start_node_ids, end_node_ids, dists, pred_maps, paths
 
 

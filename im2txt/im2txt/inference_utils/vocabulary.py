@@ -65,10 +65,7 @@ class Vocabulary(object):
 
   def word_to_id(self, word):
     """Returns the integer word id of a word string."""
-    if word in self.vocab:
-      return self.vocab[word]
-    else:
-      return self.unk_id
+    return self.vocab[word] if word in self.vocab else self.unk_id
 
   def id_to_word(self, word_id):
     """Returns the word string of an integer word id."""

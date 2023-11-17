@@ -63,8 +63,7 @@ def adjust_args_for_mode(args, mode):
   return args
 
 def get_solver_vars(solver_str):
-  if solver_str == '': vals = []; 
-  else: vals = solver_str.split('_')
+  vals = [] if solver_str == '' else solver_str.split('_')
   ks = ['clip', 'dlw', 'long', 'typ', 'isdk', 'adam_eps', 'init_lr'];
   ks = ks[:len(vals)]
 
@@ -86,7 +85,7 @@ def get_solver_vars(solver_str):
   if len(vals) == 7: ks.append('init_lr');  vals.append('lr1en3')
 
   assert(len(vals) == 8)
-  
+
   vars = utils.Foo()
   for k, v in zip(ks, vals):
     setattr(vars, k, v)
@@ -118,7 +117,7 @@ def process_solver_str(solver_str):
   elif long == 'long2':
     solver.steps_per_decay = 80000
     solver.max_steps = 120000
-  elif long == 'nolong' or long == 'nol':
+  elif long in ['nolong', 'nol']:
     solver.steps_per_decay = 20000
     solver.max_steps = 60000
   else:
@@ -126,7 +125,7 @@ def process_solver_str(solver_str):
     assert(False)
 
   clip = solver_vars.clip
-  if clip == 'noclip' or clip == 'nocl':
+  if clip in ['noclip', 'nocl']:
     solver.clip_gradient_norm = 0
   elif clip[:4] == 'clip':
     solver.clip_gradient_norm = float(clip[4:].replace('x', '.'))
@@ -158,9 +157,7 @@ def process_solver_str(solver_str):
   return solver
 
 def get_navtask_vars(navtask_str):
-  if navtask_str == '': vals = []
-  else: vals = navtask_str.split('_')
-
+  vals = [] if navtask_str == '' else navtask_str.split('_')
   ks_all = ['dataset_name', 'modality', 'task', 'history', 'max_dist',
             'num_steps', 'step_size', 'n_ori', 'aux_views', 'data_aug']
   ks = ks_all[:len(vals)]

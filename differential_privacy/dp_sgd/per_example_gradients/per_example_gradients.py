@@ -72,11 +72,7 @@ def Interface(ys, xs):
          `ys`.
   """
 
-  if isinstance(ys, (list, tuple)):
-    queue = list(ys)
-  else:
-    queue = [ys]
-
+  queue = list(ys) if isinstance(ys, (list, tuple)) else [ys]
   out = OrderedDict()
   if isinstance(xs, (list, tuple)):
     for x in xs:
@@ -90,7 +86,7 @@ def Interface(ys, xs):
     y = queue.pop()
     if y in done:
       continue
-    done = done.union(set([y]))
+    done = done.union({y})
     for x in y.op.inputs:
       if x in out:
         out[x].append(y)
@@ -236,7 +232,7 @@ class Conv2DPXG(object):
                 in xrange(batch_size)]
     for input_x in input_px:
       assert int(input_x.get_shape()[0]) == 1
-    w_px = [tf.identity(w) for example in xrange(batch_size)]
+    w_px = [tf.identity(w) for _ in xrange(batch_size)]
     conv_px = [tf.nn.conv2d(input_x, w_x,
                             strides=strides,
                             padding=padding)

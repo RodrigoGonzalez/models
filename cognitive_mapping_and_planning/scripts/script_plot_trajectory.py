@@ -67,17 +67,20 @@ def _load_trajectory():
   last_checkpoint = slim.evaluation.wait_for_new_checkpoint(dir_name, None)
   checkpoint_iter = int(os.path.basename(last_checkpoint).split('-')[1])
 
-  # Load the distances.
-  a = utils.load_variables(os.path.join(dir_name, 'bench_on_'+FLAGS.imset,
-                                        'all_locs_at_t_{:d}.pkl'.format(checkpoint_iter)))
-  return a
+  return utils.load_variables(
+      os.path.join(
+          dir_name,
+          f'bench_on_{FLAGS.imset}',
+          'all_locs_at_t_{:d}.pkl'.format(checkpoint_iter),
+      ))
 
 def _compute_hardness():
   # Load the stanford data to compute the hardness.
   if FLAGS.type == '':
-    args = sna.get_args_for_config(FLAGS.config_name+'+bench_'+FLAGS.imset)
+    args = sna.get_args_for_config(f'{FLAGS.config_name}+bench_{FLAGS.imset}')
   else:
-    args = sna.get_args_for_config(FLAGS.type+'.'+FLAGS.config_name+'+bench_'+FLAGS.imset)
+    args = sna.get_args_for_config(
+        f'{FLAGS.type}.{FLAGS.config_name}+bench_{FLAGS.imset}')
 
   args.navtask.logdir = None
   R = lambda: nav_env.get_multiplexer_class(args.navtask, 0)
@@ -88,7 +91,7 @@ def _compute_hardness():
   # Sample a room.
   h_dists = []
   gt_dists = []
-  for i in range(250):
+  for _ in range(250):
     e = R.sample_env(rng_data)
     nodes = e.task.nodes
 

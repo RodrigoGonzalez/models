@@ -61,55 +61,81 @@ def _inputs(problem, lstm_states, lstm_state_dims):
   with tf.name_scope('inputs'):
     n_views = problem.n_views
 
-    inputs = []
-    inputs.append(('orig_maps', tf.float32,
-                   (problem.batch_size, 1, None, None, 1)))
-    inputs.append(('goal_loc', tf.float32,
-                   (problem.batch_size, problem.num_goals, 2)))
-
-    # For initing LSTM.
-    inputs.append(('rel_goal_loc_at_start', tf.float32,
-                   (problem.batch_size, problem.num_goals,
-                    problem.rel_goal_loc_dim)))
+    inputs = [
+        ('orig_maps', tf.float32, (problem.batch_size, 1, None, None, 1)),
+        ('goal_loc', tf.float32, (problem.batch_size, problem.num_goals, 2)),
+        (
+            'rel_goal_loc_at_start',
+            tf.float32,
+            (problem.batch_size, problem.num_goals, problem.rel_goal_loc_dim),
+        ),
+    ]
     common_input_data, _ = tf_utils.setup_inputs(inputs)
 
     inputs = []
-    inputs.append(('imgs', tf.float32, (problem.batch_size, None, n_views,
-                                        problem.img_height, problem.img_width,
-                                        problem.img_channels)))
-    # Goal location as a tuple of delta location and delta theta.
-    inputs.append(('rel_goal_loc', tf.float32, (problem.batch_size, None,
-                                                problem.rel_goal_loc_dim)))
+    inputs.extend((
+        (
+            'imgs',
+            tf.float32,
+            (
+                problem.batch_size,
+                None,
+                n_views,
+                problem.img_height,
+                problem.img_width,
+                problem.img_channels,
+            ),
+        ),
+        (
+            'rel_goal_loc',
+            tf.float32,
+            (problem.batch_size, None, problem.rel_goal_loc_dim),
+        ),
+    ))
     if problem.outputs.visit_count:
-      inputs.append(('visit_count', tf.int32, (problem.batch_size, None, 1)))
-      inputs.append(('last_visit', tf.int32, (problem.batch_size, None, 1)))
-
-    for i, (state, dim) in enumerate(zip(lstm_states, lstm_state_dims)):
-      inputs.append((state, tf.float32, (problem.batch_size, 1, dim)))
-
+      inputs.extend((
+          ('visit_count', tf.int32, (problem.batch_size, None, 1)),
+          ('last_visit', tf.int32, (problem.batch_size, None, 1)),
+      ))
+    inputs.extend((state, tf.float32, (problem.batch_size, 1, dim))
+                  for state, dim in zip(lstm_states, lstm_state_dims))
     if problem.outputs.egomotion:
-      inputs.append(('incremental_locs', tf.float32,
-                     (problem.batch_size, None, 2)))
-      inputs.append(('incremental_thetas', tf.float32,
-                     (problem.batch_size, None, 1)))
-
-    inputs.append(('step_number', tf.int32, (1, None, 1)))
-    inputs.append(('node_ids', tf.int32, (problem.batch_size, None,
-                                          problem.node_ids_dim)))
-    inputs.append(('perturbs', tf.float32, (problem.batch_size, None,
-                                            problem.perturbs_dim)))
-
-    # For plotting result plots
-    inputs.append(('loc_on_map', tf.float32, (problem.batch_size, None, 2)))
-    inputs.append(('gt_dist_to_goal', tf.float32, (problem.batch_size, None, 1)))
+      inputs.extend((
+          ('incremental_locs', tf.float32, (problem.batch_size, None, 2)),
+          (
+              'incremental_thetas',
+              tf.float32,
+              (problem.batch_size, None, 1),
+          ),
+      ))
+    inputs.extend((
+        ('step_number', tf.int32, (1, None, 1)),
+        (
+            'node_ids',
+            tf.int32,
+            (problem.batch_size, None, problem.node_ids_dim),
+        ),
+        (
+            'perturbs',
+            tf.float32,
+            (problem.batch_size, None, problem.perturbs_dim),
+        ),
+        ('loc_on_map', tf.float32, (problem.batch_size, None, 2)),
+        ('gt_dist_to_goal', tf.float32, (problem.batch_size, None, 1)),
+    ))
     step_input_data, _ = tf_utils.setup_inputs(inputs)
 
     inputs = []
-    inputs.append(('executed_actions', tf.int32, (problem.batch_size, None)))
-    inputs.append(('rewards', tf.float32, (problem.batch_size, None)))
-    inputs.append(('action_sample_wts', tf.float32, (problem.batch_size, None)))
-    inputs.append(('action', tf.int32, (problem.batch_size, None,
-                                        problem.num_actions)))
+    inputs.extend((
+        ('executed_actions', tf.int32, (problem.batch_size, None)),
+        ('rewards', tf.float32, (problem.batch_size, None)),
+        ('action_sample_wts', tf.float32, (problem.batch_size, None)),
+        (
+            'action',
+            tf.int32,
+            (problem.batch_size, None, problem.num_actions),
+        ),
+    ))
     train_data, _ = tf_utils.setup_inputs(inputs)
     train_data.update(step_input_data)
     train_data.update(common_input_data)
@@ -154,8 +180,8 @@ def visit_count_fc(visit_count, last_visit, embed_neurons, wt_decay, fc_dropout)
 
 def lstm_setup(name, x, batch_size, is_single_step, lstm_dim, lstm_out,
                num_steps, state_input_op):
-  # returns state_name, state_init_op, updated_state_op, out_op 
-  with tf.name_scope('reshape_'+name):
+  # returns state_name, state_init_op, updated_state_op, out_op
+  with tf.name_scope(f'reshape_{name}'):
     sh = x.get_shape().as_list()
     x = tf.reshape(x, shape=[batch_size, -1, sh[-1]])
 
@@ -177,7 +203,7 @@ def lstm_setup(name, x, batch_size, is_single_step, lstm_dim, lstm_out,
 
 def combine_setup(name, combine_type, embed_img, embed_goal, num_img_neuorons=None,
                   num_goal_neurons=None):
-  with tf.name_scope(name + '_' + combine_type):
+  with tf.name_scope(f'{name}_{combine_type}'):
     if combine_type == 'add':
       # Simple concat features from goal and image
       out = embed_img + embed_goal
@@ -190,7 +216,7 @@ def combine_setup(name, combine_type, embed_img, embed_goal, num_img_neuorons=No
       re_embed_goal = tf.reshape(embed_goal, shape=[-1, num_goal_neurons, 1])
       x = tf.matmul(re_embed_img, re_embed_goal, transpose_a=False, transpose_b=False)
       out = slim.flatten(x)
-    elif combine_type == 'none' or combine_type == 'imgonly':
+    elif combine_type in ['none', 'imgonly']:
       out = embed_img
     elif combine_type == 'goalonly':
       out = embed_goal

@@ -63,8 +63,7 @@ class Shape():
     load_flags = load_flags | assimp.postprocess.aiProcess_JoinIdenticalVertices;
     load_flags = load_flags | assimp.postprocess.aiProcess_ImproveCacheLocality;
     load_flags = load_flags | assimp.postprocess.aiProcess_GenUVCoords;
-    load_flags = load_flags | assimp.postprocess.aiProcess_FindInvalidData;
-    return load_flags
+    return load_flags | assimp.postprocess.aiProcess_FindInvalidData
 
   def __init__(self, obj_file, material_file=None, load_materials=True,
                name_prefix='', name_suffix=''):
@@ -105,11 +104,7 @@ class Shape():
     self.materials = materials
 
   def _filter_triangles(self, meshes):
-    select = []
-    for i in range(len(meshes)):
-      if meshes[i].primitivetypes == 4:
-        select.append(i)
-    return select
+    return [i for i in range(len(meshes)) if meshes[i].primitivetypes == 4]
 
   def flip_shape(self):
     for m in self.meshes:
@@ -121,18 +116,12 @@ class Shape():
       # m.vertices[:,[0,1]] = m.vertices[:,[1,0]]
 
   def get_vertices(self):
-    vs = []
-    for m in self.meshes:
-      vs.append(m.vertices)
+    vs = [m.vertices for m in self.meshes]
     vss = np.concatenate(vs, axis=0)
     return vss, vs
 
   def get_faces(self):
-    vs = []
-    for m in self.meshes:
-      v = m.faces
-      vs.append(v)
-    return vs
+    return [m.faces for m in self.meshes]
 
   def get_number_of_meshes(self):
     return len(self.meshes)
@@ -161,19 +150,21 @@ class SwiftshaderRenderer():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     if d_shader is not None and rgb_shader is not None:
       logging.fatal('Does not support setting both rgb_shader and d_shader.')
-    
+
     if d_shader is not None:
       assert rgb_shader is None
       shader = d_shader
       self.modality = 'depth'
-    
+
     if rgb_shader is not None:
       assert d_shader is None
       shader = rgb_shader
       self.modality = 'rgb'
-    
-    self.create_shaders(os.path.join(dir_path, shader+'.vp'),
-                        os.path.join(dir_path, shader + '.fp'))
+
+    self.create_shaders(
+        os.path.join(dir_path, f'{shader}.vp'),
+        os.path.join(dir_path, f'{shader}.fp'),
+    )
     aspect = width*1./(height*1.)
     self.set_camera(fov, z_near, z_far, aspect)
 
@@ -330,7 +321,6 @@ class SwiftshaderRenderer():
 
     np_rgb_img = None
     np_d_img = None
-    c = 1000.
     if take_screenshot:
       if self.modality == 'rgb':
         screenshot_rgba = np.zeros((self.height, self.width, 4), dtype=np.uint8)
@@ -341,6 +331,7 @@ class SwiftshaderRenderer():
         screenshot_d = np.zeros((self.height, self.width, 4), dtype=np.uint8)
         glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE, screenshot_d)
         np_d_img = screenshot_d[::-1,:,:3];
+        c = 1000.
         np_d_img = np_d_img[:,:,2]*(255.*255./c) + np_d_img[:,:,1]*(255./c) + np_d_img[:,:,0]*(1./c)
         np_d_img = np_d_img.astype(np.float32)
         np_d_img[np_d_img == 0] = np.NaN
@@ -369,7 +360,7 @@ class SwiftshaderRenderer():
   def load_shapes(self, shapes):
     entities = self.entities
     entity_ids = []
-    for i, shape in enumerate(shapes):
+    for shape in shapes:
       for j in range(len(shape.meshes)):
         name = shape.meshes[j].name
         assert name not in entities, '{:s} entity already exists.'.format(name)

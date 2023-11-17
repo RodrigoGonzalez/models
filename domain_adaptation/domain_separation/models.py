@@ -412,7 +412,7 @@ def dsn_cropped_linemod(images,
 
   end_points = {}
 
-  tf.summary.image('{}/input_images'.format(prefix), images)
+  tf.summary.image(f'{prefix}/input_images', images)
   with slim.arg_scope(
       [slim.conv2d, slim.fully_connected],
       weights_regularizer=slim.l2_regularizer(weight_decay),

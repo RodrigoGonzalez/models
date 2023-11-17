@@ -35,9 +35,9 @@ autoencoder = VariationalAutoencoder(n_input = 784,
 
 for epoch in range(training_epochs):
     avg_cost = 0.
-    total_batch = int(n_samples / batch_size)
+    total_batch = n_samples // batch_size
     # Loop over all batches
-    for i in range(total_batch):
+    for _ in range(total_batch):
         batch_xs = get_random_block_from_data(X_train, batch_size)
 
         # Fit training using batch data
@@ -49,4 +49,4 @@ for epoch in range(training_epochs):
     if epoch % display_step == 0:
         print("Epoch:", '%04d' % (epoch + 1), "cost=", "{:.9f}".format(avg_cost))
 
-print("Total cost: " + str(autoencoder.calc_total_cost(X_test)))
+print(f"Total cost: {str(autoencoder.calc_total_cost(X_test))}")

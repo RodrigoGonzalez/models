@@ -70,10 +70,8 @@ def quaternion_metric(predictions, labels):
 
 
 def angle_diff(true_q, pred_q):
-  angles = 2 * (
-      180.0 /
-      np.pi) * np.arccos(np.abs(np.sum(np.multiply(pred_q, true_q), axis=1)))
-  return angles
+  return (2 * (180.0 / np.pi) *
+          np.arccos(np.abs(np.sum(np.multiply(pred_q, true_q), axis=1))))
 
 
 def provide_batch_fn():
@@ -125,10 +123,10 @@ def main(_):
     if FLAGS.enable_precision_recall:
       for i in xrange(num_classes):
         index_map = tf.one_hot(i, depth=num_classes)
-        name = 'PR/Precision_{}'.format(i)
+        name = f'PR/Precision_{i}'
         metric_names_to_values[name] = slim.metrics.streaming_precision(
             tf.gather(index_map, predictions), tf.gather(index_map, labels))
-        name = 'PR/Recall_{}'.format(i)
+        name = f'PR/Recall_{i}'
         metric_names_to_values[name] = slim.metrics.streaming_recall(
             tf.gather(index_map, predictions), tf.gather(index_map, labels))
 

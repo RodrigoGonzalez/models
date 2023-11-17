@@ -37,9 +37,8 @@ class InferenceWrapper(inference_wrapper_base.InferenceWrapperBase):
     return model
 
   def feed_image(self, sess, encoded_image):
-    initial_state = sess.run(fetches="lstm/initial_state:0",
-                             feed_dict={"image_feed:0": encoded_image})
-    return initial_state
+    return sess.run(fetches="lstm/initial_state:0",
+                    feed_dict={"image_feed:0": encoded_image})
 
   def inference_step(self, sess, input_feed, state_feed):
     softmax_output, state_output = sess.run(

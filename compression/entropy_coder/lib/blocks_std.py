@@ -41,7 +41,7 @@ def HandleConvPaddingModes(x, padding, kernel_shape, strides):
   if np.all(kernel_shape[:2] == 1):
     return x, 'VALID'
 
-  if padding == 'REFLECT' or padding == 'SYMMETRIC':
+  if padding in ['REFLECT', 'SYMMETRIC']:
     # We manually compute the number of paddings as if 'SAME'.
     # From Tensorflow kernel, the formulas are as follows.
     #   output_shape = ceil(input_shape / strides)
@@ -229,8 +229,9 @@ class NN(block_base.BlockBase):
           for _ in args]
 
     if len(self._matrices) != len(args):
-      raise ValueError('{} expected {} inputs, but observed {} inputs'.format(
-          self.name, len(self._matrices), len(args)))
+      raise ValueError(
+          f'{self.name} expected {len(self._matrices)} inputs, but observed {len(args)} inputs'
+      )
 
     if len(args) > 1:
       y = tf.add_n([m(x) for m, x in zip(self._matrices, args)])

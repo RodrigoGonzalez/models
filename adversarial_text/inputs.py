@@ -102,27 +102,27 @@ class VatxtInput(object):
   def state(self):
     # LSTM tuple states
     state_names = _get_tuple_state_names(self._num_states, self._state_name)
-    return tuple([
-        tf.contrib.rnn.LSTMStateTuple(
-            self._batch.state(c_name), self._batch.state(h_name))
-        for c_name, h_name in state_names
-    ])
+    return tuple(
+        tf.contrib.rnn.LSTMStateTuple(self._batch.state(c_name),
+                                      self._batch.state(h_name))
+        for c_name, h_name in state_names)
 
   def save_state(self, value):
     # LSTM tuple states
     state_names = _get_tuple_state_names(self._num_states, self._state_name)
     save_ops = []
     for (c_state, h_state), (c_name, h_name) in zip(value, state_names):
-      save_ops.append(self._batch.save_state(c_name, c_state))
-      save_ops.append(self._batch.save_state(h_name, h_state))
+      save_ops.extend((
+          self._batch.save_state(c_name, c_state),
+          self._batch.save_state(h_name, h_state),
+      ))
     return tf.group(*save_ops)
 
 
 def _get_tuple_state_names(num_states, base_name):
   """Returns state names for use with LSTM tuple state."""
-  state_names = [('{}_{}_c'.format(i, base_name), '{}_{}_h'.format(
-      i, base_name)) for i in range(num_states)]
-  return state_names
+  return [(f'{i}_{base_name}_c', f'{i}_{base_name}_h')
+          for i in range(num_states)]
 
 
 def _split_bidir_tokens(batch):
@@ -224,7 +224,7 @@ def _read_and_batch(data_dir,
   """
   data_path = os.path.join(data_dir, fname)
   if not tf.gfile.Exists(data_path):
-    raise ValueError('Failed to find file: %s' % data_path)
+    raise ValueError(f'Failed to find file: {data_path}')
 
   tokens_shape = [2] if bidir_input else []
   seq_key, ctx, sequence = _read_single_sequence_example(
@@ -236,12 +236,11 @@ def _read_and_batch(data_dir,
     initial_states[c_state] = tf.zeros(state_size)
     initial_states[h_state] = tf.zeros(state_size)
   if bidir_input:
-    rev_state_names = _get_tuple_state_names(num_layers,
-                                             '{}_reverse'.format(state_name))
+    rev_state_names = _get_tuple_state_names(num_layers, f'{state_name}_reverse')
     for rev_c_state, rev_h_state in rev_state_names:
       initial_states[rev_c_state] = tf.zeros(state_size)
       initial_states[rev_h_state] = tf.zeros(state_size)
-  batch = tf.contrib.training.batch_sequences_with_states(
+  return tf.contrib.training.batch_sequences_with_states(
       input_key=seq_key,
       input_sequences=sequence,
       input_context=ctx,
@@ -253,8 +252,8 @@ def _read_and_batch(data_dir,
       num_threads=4,
       capacity=batch_size * 10,
       make_keys_unique=True,
-      make_keys_unique_seed=29392)
-  return batch
+      make_keys_unique_seed=29392,
+  )
 
 
 def inputs(data_dir=None,
@@ -296,7 +295,7 @@ def inputs(data_dir=None,
       forward_batch = _read_and_batch(data_dir, forward_fname, state_name,
                                       state_size, num_layers, unroll_steps,
                                       batch_size)
-      state_name_rev = state_name + '_reverse'
+      state_name_rev = f'{state_name}_reverse'
       reverse_batch = _read_and_batch(data_dir, reverse_fname, state_name_rev,
                                       state_size, num_layers, unroll_steps,
                                       batch_size)
@@ -333,9 +332,10 @@ def inputs(data_dir=None,
           num_states=num_layers)
       reverse_input = VatxtInput(
           batch,
-          state_name=state_name + '_reverse',
+          state_name=f'{state_name}_reverse',
           tokens=reverse_tokens,
-          num_states=num_layers)
+          num_states=num_layers,
+      )
       return forward_input, reverse_input
     else:
       # Unidirectional LM or classifier

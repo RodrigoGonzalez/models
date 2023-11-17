@@ -172,13 +172,12 @@ def add_reconstruction_loss(recon_loss_name, images, recons, weight, domain):
   elif recon_loss_name == 'sum_of_squares':
     loss_fn = tf.contrib.losses.mean_squared_error
   else:
-    raise ValueError('recon_loss_name value [%s] not recognized.' %
-                     recon_loss_name)
+    raise ValueError(f'recon_loss_name value [{recon_loss_name}] not recognized.')
 
   loss = loss_fn(recons, images, weight)
   assert_op = tf.Assert(tf.is_finite(loss), [loss])
   with tf.control_dependencies([assert_op]):
-    tf.summary.scalar('losses/%s Recon Loss' % domain, loss)
+    tf.summary.scalar(f'losses/{domain} Recon Loss', loss)
 
 
 def add_autoencoders(source_data, source_shared, target_data, target_shared,

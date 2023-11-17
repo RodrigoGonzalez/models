@@ -176,8 +176,7 @@ class SequenceWrapper(object):
     return timestep
 
   def __iter__(self):
-    for timestep in self._timesteps:
-      yield timestep
+    yield from self._timesteps
 
   def __len__(self):
     return len(self._timesteps)
@@ -328,5 +327,5 @@ def write_vocab_and_frequency(ordered_vocab_freqs, output_dir):
   with open(os.path.join(output_dir, 'vocab.txt'), 'w') as vocab_f:
     with open(os.path.join(output_dir, 'vocab_freq.txt'), 'w') as freq_f:
       for word, freq in ordered_vocab_freqs:
-        vocab_f.write('{}\n'.format(word))
-        freq_f.write('{}\n'.format(freq))
+        vocab_f.write(f'{word}\n')
+        freq_f.write(f'{freq}\n')

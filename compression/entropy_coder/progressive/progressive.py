@@ -66,9 +66,7 @@ class BrnnPredictor(blocks.BlockBase):
     # - the binary codes that are before in raster scan order.
     h = tf.concat(values=[self._adaptation0(x), self._adaptation1(s)], axis=3)
 
-    estimated_codes = self._predictor(h)
-
-    return estimated_codes
+    return self._predictor(h)
 
 
 class LayerPrediction(blocks.BlockBase):
@@ -86,23 +84,31 @@ class LayerPrediction(blocks.BlockBase):
     with self._BlockScope():
       # Layers used to do the conditional code prediction.
       self._brnn_predictors = []
-      for _ in xrange(layer_count):
-        self._brnn_predictors.append(BrnnPredictor(code_depth))
-
+      self._brnn_predictors.extend(
+          BrnnPredictor(code_depth) for _ in xrange(layer_count))
       # Layers used to generate the input of the LSTM operating on the
       # iteration/depth domain.
       hidden_depth = 2 * code_depth
       self._state_blocks = []
-      for _ in xrange(layer_count):
-        self._state_blocks.append(blocks.CompositionOperator([
-            blocks.Conv2D(
-                hidden_depth, [3, 3], [1, 1], 'SAME',
-                bias=blocks.Bias(0), act=tf.tanh),
-            blocks.Conv2D(
-                code_depth, [3, 3], [1, 1], 'SAME',
-                bias=blocks.Bias(0), act=tf.tanh)
-        ]))
-
+      self._state_blocks.extend(
+          blocks.CompositionOperator([
+              blocks.Conv2D(
+                  hidden_depth,
+                  [3, 3],
+                  [1, 1],
+                  'SAME',
+                  bias=blocks.Bias(0),
+                  act=tf.tanh,
+              ),
+              blocks.Conv2D(
+                  code_depth,
+                  [3, 3],
+                  [1, 1],
+                  'SAME',
+                  bias=blocks.Bias(0),
+                  act=tf.tanh,
+              ),
+          ]) for _ in xrange(layer_count))
       # Memory of the RNN is equivalent to the size of 2 layers of binary
       # codes.
       hidden_depth = 2 * code_depth
@@ -167,20 +173,20 @@ class ProgressiveModel(entropy_coder_model.EntropyCoderModel):
     if self._config['coded_layer_count'] > 0:
       prefix_depth = self._config['coded_layer_count'] * layer_depth
       if code_depth < prefix_depth:
-        raise ValueError('Invalid prefix depth: {} VS {}'.format(
-            prefix_depth, code_depth))
+        raise ValueError(f'Invalid prefix depth: {prefix_depth} VS {code_depth}')
       input_codes = input_codes[:, :, :, :prefix_depth]
 
     code_shape = input_codes.get_shape()
     code_depth = code_shape[-1].value
     if code_depth % layer_depth != 0:
       raise ValueError(
-          'Code depth must be a multiple of the layer depth: {} vs {}'.format(
-              code_depth, layer_depth))
+          f'Code depth must be a multiple of the layer depth: {code_depth} vs {layer_depth}'
+      )
     code_layer_count = code_depth // layer_depth
     if code_layer_count > layer_count:
-      raise ValueError('Input codes have too many layers: {}, max={}'.format(
-          code_layer_count, layer_count))
+      raise ValueError(
+          f'Input codes have too many layers: {code_layer_count}, max={layer_count}'
+      )
 
     # Block used to estimate binary codes.
     layer_prediction = LayerPrediction(layer_count, layer_depth)
@@ -192,11 +198,11 @@ class ProgressiveModel(entropy_coder_model.EntropyCoderModel):
     code_length = []
     code_layers = tf.split(
         value=input_codes, num_or_size_splits=code_layer_count, axis=3)
+    # Saturate the prediction to avoid infinite code length.
+    epsilon = 0.001
     for k in xrange(code_layer_count):
       x = code_layers[k]
       predicted_x = layer_prediction(x)
-      # Saturate the prediction to avoid infinite code length.
-      epsilon = 0.001
       predicted_x = tf.clip_by_value(
           predicted_x, -1 + epsilon, +1 - epsilon)
       code_length.append(code_length_block(
@@ -219,8 +225,7 @@ class ProgressiveModel(entropy_coder_model.EntropyCoderModel):
     if self._optimizer:
       optim_op = self._optimizer.minimize(self.loss,
                                           global_step=self._global_step)
-      block_updates = blocks.CreateBlockUpdates()
-      if block_updates:
+      if block_updates := blocks.CreateBlockUpdates():
         with tf.get_default_graph().control_dependencies([optim_op]):
           self.train_op = tf.group(*block_updates)
       else:
@@ -229,8 +234,7 @@ class ProgressiveModel(entropy_coder_model.EntropyCoderModel):
       self.train_op = None
 
   def GetConfigStringForUnitTest(self):
-    s = '{\n'
-    s += '"layer_depth": 1,\n'
+    s = '{\n' + '"layer_depth": 1,\n'
     s += '"layer_count": 8\n'
     s += '}\n'
     return s

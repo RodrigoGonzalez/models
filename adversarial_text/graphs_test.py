@@ -131,8 +131,8 @@ class GraphsTest(tf.test.TestCase):
     with open(os.path.join(FLAGS.data_dir, 'vocab.txt'), 'w') as vocab_f:
       with open(os.path.join(FLAGS.data_dir, 'vocab_freq.txt'), 'w') as freq_f:
         for word, freq in ordered_vocab_freqs:
-          vocab_f.write('{}\n'.format(word))
-          freq_f.write('{}\n'.format(freq))
+          vocab_f.write(f'{word}\n')
+          freq_f.write(f'{freq}\n')
 
   @classmethod
   def tearDownClass(cls):

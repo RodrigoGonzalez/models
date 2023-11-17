@@ -72,29 +72,28 @@ def distort_color(image, color_ordering=0, fast_mode=True, scope=None):
       else:
         image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
         image = tf.image.random_brightness(image, max_delta=32. / 255.)
+    elif color_ordering == 0:
+      image = tf.image.random_brightness(image, max_delta=32. / 255.)
+      image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+      image = tf.image.random_hue(image, max_delta=0.2)
+      image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+    elif color_ordering == 1:
+      image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+      image = tf.image.random_brightness(image, max_delta=32. / 255.)
+      image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+      image = tf.image.random_hue(image, max_delta=0.2)
+    elif color_ordering == 2:
+      image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+      image = tf.image.random_hue(image, max_delta=0.2)
+      image = tf.image.random_brightness(image, max_delta=32. / 255.)
+      image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+    elif color_ordering == 3:
+      image = tf.image.random_hue(image, max_delta=0.2)
+      image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
+      image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
+      image = tf.image.random_brightness(image, max_delta=32. / 255.)
     else:
-      if color_ordering == 0:
-        image = tf.image.random_brightness(image, max_delta=32. / 255.)
-        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
-        image = tf.image.random_hue(image, max_delta=0.2)
-        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
-      elif color_ordering == 1:
-        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
-        image = tf.image.random_brightness(image, max_delta=32. / 255.)
-        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
-        image = tf.image.random_hue(image, max_delta=0.2)
-      elif color_ordering == 2:
-        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
-        image = tf.image.random_hue(image, max_delta=0.2)
-        image = tf.image.random_brightness(image, max_delta=32. / 255.)
-        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
-      elif color_ordering == 3:
-        image = tf.image.random_hue(image, max_delta=0.2)
-        image = tf.image.random_saturation(image, lower=0.5, upper=1.5)
-        image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
-        image = tf.image.random_brightness(image, max_delta=32. / 255.)
-      else:
-        raise ValueError('color_ordering must be in [0, 3]')
+      raise ValueError('color_ordering must be in [0, 3]')
 
     # The random_* ops do not necessarily clamp.
     return tf.clip_by_value(image, 0.0, 1.0)

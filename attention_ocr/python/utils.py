@@ -65,16 +65,12 @@ def variables_to_restore(scope=None, strip_scope=False):
   Returns:
     a dictionary mapping variable names to variables for restore.
   """
-  if scope:
-    variable_map = {}
-    method_variables = slim.get_variables_to_restore(include=[scope])
-    for var in method_variables:
-      if strip_scope:
-        var_name = var.op.name[len(scope) + 1:]
-      else:
-        var_name = var.op.name
-      variable_map[var_name] = var
-
-    return variable_map
-  else:
+  if not scope:
     return {v.op.name: v for v in slim.get_variables_to_restore()}
+  variable_map = {}
+  method_variables = slim.get_variables_to_restore(include=[scope])
+  for var in method_variables:
+    var_name = var.op.name[len(scope) + 1:] if strip_scope else var.op.name
+    variable_map[var_name] = var
+
+  return variable_map

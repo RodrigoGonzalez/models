@@ -48,23 +48,17 @@ class Timer():
       logging.info('%s: %f seconds.', log_str, self.time_per_call)
       self.last_log_time = t
 
-    if average:
-      return self.time_per_call
-    else:
-      return diff
+    return self.time_per_call if average else diff
 
 class Foo(object):
   def __init__(self, **kwargs):
     self.__dict__.update(kwargs)
   def __str__(self):
     str_ = ''
-    for v in vars(self).keys():
+    for v in vars(self):
       a = getattr(self, v)
-      if True: #isinstance(v, object):
-        str__ = str(a)
-        str__ = str__.replace('\n', '\n  ')
-      else:
-        str__ = str(a)
+      str__ = str(a)
+      str__ = str__.replace('\n', '\n  ')
       str_ += '{:s}: {:s}'.format(v, str__)
       str_ += '\n'
     return str_
@@ -108,32 +102,30 @@ def save_variables(pickle_file_name, var, info, overwrite = False):
   if fu.exists(pickle_file_name) and overwrite == False:
     raise Exception('{:s} exists and over write is false.'.format(pickle_file_name))
   # Construct the dictionary
-  assert(type(var) == list); assert(type(info) == list);
-  d = {}
-  for i in xrange(len(var)):
-    d[info[i]] = var[i]
+  assert(type(var) == list)
+  assert(type(info) == list);
+  d = {info[i]: var[i] for i in xrange(len(var))}
   with fu.fopen(pickle_file_name, 'w') as f:
     cPickle.dump(d, f, cPickle.HIGHEST_PROTOCOL)
 
 def load_variables(pickle_file_name):
-  if fu.exists(pickle_file_name):
-    with fu.fopen(pickle_file_name, 'r') as f:
-      d = cPickle.load(f)
-    return d
-  else:
+  if not fu.exists(pickle_file_name):
     raise Exception('{:s} does not exists.'.format(pickle_file_name))
+  with fu.fopen(pickle_file_name, 'r') as f:
+    d = cPickle.load(f)
+  return d
 
 def voc_ap(rec, prec):
   rec = rec.reshape((-1,1))
   prec = prec.reshape((-1,1))
-  z = np.zeros((1,1)) 
+  z = np.zeros((1,1))
   o = np.ones((1,1))
   mrec = np.vstack((z, rec, o))
   mpre = np.vstack((z, prec, z))
   for i in range(len(mpre)-2, -1, -1):
     mpre[i] = max(mpre[i], mpre[i+1])
 
-  I = np.where(mrec[1:] != mrec[0:-1])[0]+1;
+  I = np.where(mrec[1:] != mrec[:-1])[0] + 1;
   ap = 0;
   for i in I:
     ap = ap + (mrec[i] - mrec[i-1])*mpre[i];

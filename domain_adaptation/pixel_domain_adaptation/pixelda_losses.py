@@ -74,20 +74,22 @@ def log_quaternion_loss_batch(predictions, labels, params):
   use_logging = params['use_logging']
   assertions = []
   if use_logging:
-    assertions.append(
+    assertions.extend((
         tf.Assert(
             tf.reduce_all(
                 tf.less(
                     tf.abs(tf.reduce_sum(tf.square(predictions), [1]) - 1),
-                    1e-4)),
-            ['The l2 norm of each prediction quaternion vector should be 1.']))
-    assertions.append(
+                    1e-4,
+                )),
+            ['The l2 norm of each prediction quaternion vector should be 1.'],
+        ),
         tf.Assert(
             tf.reduce_all(
-                tf.less(
-                    tf.abs(tf.reduce_sum(tf.square(labels), [1]) - 1), 1e-4)),
-            ['The l2 norm of each label quaternion vector should be 1.']))
-
+                tf.less(tf.abs(tf.reduce_sum(tf.square(labels), [1]) - 1),
+                        1e-4)),
+            ['The l2 norm of each label quaternion vector should be 1.'],
+        ),
+    ))
   with tf.control_dependencies(assertions):
     product = tf.multiply(predictions, labels)
   internal_dot_products = tf.reduce_sum(product, [1])
@@ -98,8 +100,7 @@ def log_quaternion_loss_batch(predictions, labels, params):
         tf.shape(internal_dot_products)
     ], 'internal_dot_products:')
 
-  logcost = tf.log(1e-4 + 1 - tf.abs(internal_dot_products))
-  return logcost
+  return tf.log(1e-4 + 1 - tf.abs(internal_dot_products))
 
 
 def log_quaternion_loss(predictions, labels, params):
@@ -148,10 +149,10 @@ def _quaternion_loss(labels, predictions, weight, batch_size, domain,
   if add_summaries:
     assert_op = tf.Assert(tf.is_finite(loss), [loss])
     with tf.control_dependencies([assert_op]):
-      tf.summary.histogram(
-          'Log_Quaternion_Loss_%s' % domain, loss, collections='losses')
-      tf.summary.scalar(
-          'Task_Quaternion_Loss_%s' % domain, loss, collections='losses')
+      tf.summary.histogram(f'Log_Quaternion_Loss_{domain}',
+                           loss,
+                           collections='losses')
+      tf.summary.scalar(f'Task_Quaternion_Loss_{domain}', loss, collections='losses')
 
   return loss
 
@@ -297,12 +298,12 @@ def _transferred_similarity_loss(reconstructions,
 
     reconstruction_similarity_loss_fn = hinged_mae
   else:
-    raise ValueError('Unknown reconstruction loss %s' % method)
+    raise ValueError(f'Unknown reconstruction loss {method}')
 
   reconstruction_similarity_loss = reconstruction_similarity_loss_fn(
       reconstructions, source_images, weight)
 
-  name = '%s_Similarity_(%s)' % (name, method)
+  name = f'{name}_Similarity_({method})'
   tf.summary.scalar(name, reconstruction_similarity_loss)
   return reconstruction_similarity_loss
 

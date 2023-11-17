@@ -256,10 +256,7 @@ def create_metrics(end_points, source_labels, target_labels, hparams):
   # Pose data-specific losses.
   ##########################################################################
   if 'quaternion' in source_labels.keys():
-    params = {}
-    params['use_logging'] = False
-    params['batch_size'] = batch_size
-
+    params = {'use_logging': False, 'batch_size': batch_size}
     angle_loss_source = to_degrees(
         pixelda_losses.log_quaternion_loss_batch(end_points[
             'source_quaternion'], source_labels['quaternion'], params))

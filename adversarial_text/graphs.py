@@ -92,10 +92,7 @@ flags.DEFINE_float('keep_prob_cl_hidden', 1.0,
 
 
 def get_model():
-  if FLAGS.bidir_lstm:
-    return VatxtBidirModel()
-  else:
-    return VatxtModel()
+  return VatxtBidirModel() if FLAGS.bidir_lstm else VatxtModel()
 
 
 class VatxtModel(object):
@@ -289,10 +286,7 @@ class VatxtModel(object):
     logits = self.layers['cl_logits'](lstm_out)
     loss = layers_lib.classification_loss(logits, inputs.labels, inputs.weights)
 
-    if return_intermediates:
-      return lstm_out, next_state, logits, loss
-    else:
-      return loss
+    return (lstm_out, next_state, logits, loss) if return_intermediates else loss
 
   def adversarial_loss(self):
     """Compute adversarial loss based on FLAGS.adv_training_method."""
@@ -325,10 +319,7 @@ class VatxtModel(object):
       def logits_from_embedding(embedded, return_next_state=False):
         _, next_state, logits, _ = self.cl_loss_from_embedding(
             embedded, inputs=self.lm_inputs, return_intermediates=True)
-        if return_next_state:
-          return next_state, logits
-        else:
-          return logits
+        return (next_state, logits) if return_next_state else logits
 
       next_state, lm_cl_logits = logits_from_embedding(
           self.tensors['lm_embedded'], return_next_state=True)
@@ -510,10 +501,10 @@ class VatxtBidirModel(VatxtModel):
     if inputs is None:
       inputs = self.cl_inputs
 
-    out = []
-    for (layer_name, emb, inp) in zip(['lstm', 'lstm_reverse'], embedded,
-                                      inputs):
-      out.append(self.layers[layer_name](emb, inp.state, inp.length))
+    out = [
+        self.layers[layer_name](emb, inp.state, inp.length) for layer_name, emb,
+        inp in zip(['lstm', 'lstm_reverse'], embedded, inputs)
+    ]
     lstm_outs, next_states = zip(*out)
 
     # Concatenate output of forward and reverse LSTMs
@@ -524,10 +515,7 @@ class VatxtBidirModel(VatxtModel):
     loss = layers_lib.classification_loss(logits, f_inputs.labels,
                                           f_inputs.weights)
 
-    if return_intermediates:
-      return lstm_out, next_states, logits, loss
-    else:
-      return loss
+    return (lstm_out, next_states, logits, loss) if return_intermediates else loss
 
   def adversarial_loss(self):
     """Compute adversarial loss based on FLAGS.adv_training_method."""
@@ -560,10 +548,7 @@ class VatxtBidirModel(VatxtModel):
       def logits_from_embedding(embedded, return_next_state=False):
         _, next_states, logits, _ = self.cl_loss_from_embedding(
             embedded, inputs=self.lm_inputs, return_intermediates=True)
-        if return_next_state:
-          return next_states, logits
-        else:
-          return logits
+        return (next_states, logits) if return_next_state else logits
 
       lm_embedded = (self.tensors['lm_embedded'],
                      self.tensors['lm_embedded_reverse'])
@@ -636,9 +621,9 @@ def _get_vocab_freqs():
       if len(freqs) != FLAGS.vocab_size:
         raise ValueError('Frequency file length %d != vocab size %d' %
                          (len(freqs), FLAGS.vocab_size))
+  elif FLAGS.vocab_freq_path:
+    raise ValueError('vocab_freq_path not found')
   else:
-    if FLAGS.vocab_freq_path:
-      raise ValueError('vocab_freq_path not found')
     freqs = [1] * FLAGS.vocab_size
 
   return freqs

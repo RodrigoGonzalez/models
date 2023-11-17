@@ -311,16 +311,15 @@ class Model(object):
       a tensor with the same height and width, but altered feature_size.
     """
     mparams = self._mparams['encode_coordinates_fn']
-    if mparams.enabled:
-      batch_size, h, w, _ = net.shape.as_list()
-      x, y = tf.meshgrid(tf.range(w), tf.range(h))
-      w_loc = slim.one_hot_encoding(x, num_classes=w)
-      h_loc = slim.one_hot_encoding(y, num_classes=h)
-      loc = tf.concat([h_loc, w_loc], 2)
-      loc = tf.tile(tf.expand_dims(loc, 0), [batch_size, 1, 1, 1])
-      return tf.concat([net, loc], 3)
-    else:
+    if not mparams.enabled:
       return net
+    batch_size, h, w, _ = net.shape.as_list()
+    x, y = tf.meshgrid(tf.range(w), tf.range(h))
+    w_loc = slim.one_hot_encoding(x, num_classes=w)
+    h_loc = slim.one_hot_encoding(y, num_classes=h)
+    loc = tf.concat([h_loc, w_loc], 2)
+    loc = tf.tile(tf.expand_dims(loc, 0), [batch_size, 1, 1, 1])
+    return tf.concat([net, loc], 3)
 
   def create_base(self,
                   images,
@@ -477,7 +476,7 @@ class Model(object):
 
     def sname(label):
       prefix = 'train' if is_training else 'eval'
-      return '%s/%s' % (prefix, label)
+      return f'{prefix}/{label}'
 
     max_outputs = 4
     # TODO(gorban): uncomment, when tf.summary.text released.
@@ -519,7 +518,7 @@ class Model(object):
                      rej_char=self._params.null_code))
 
       for name, value in names_to_values.iteritems():
-        summary_name = 'eval/' + name
+        summary_name = f'eval/{name}'
         tf.summary.scalar(summary_name, tf.Print(value, [value], summary_name))
       return names_to_updates.values()
 

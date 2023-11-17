@@ -116,8 +116,8 @@ def train(target, dataset, cluster_spec):
   with tf.device('/job:worker/task:%d' % FLAGS.task_id):
     # Variables and its related init/assign ops are assigned to ps.
     with slim.scopes.arg_scope(
-        [slim.variables.variable, slim.variables.global_step],
-        device=slim.variables.VariableDeviceChooser(num_parameter_servers)):
+            [slim.variables.variable, slim.variables.global_step],
+            device=slim.variables.VariableDeviceChooser(num_parameter_servers)):
       # Create a variable to count the number of train() calls. This equals the
       # number of updates applied to the variables.
       global_step = slim.variables.global_step()
@@ -174,7 +174,7 @@ def train(target, dataset, cluster_spec):
           loss_name = l.op.name
           # Name each loss as '(raw)' and name the moving average version of the
           # loss as the original loss name.
-          tf.summary.scalar(loss_name + ' (raw)', l)
+          tf.summary.scalar(f'{loss_name} (raw)', l)
           tf.summary.scalar(loss_name, loss_averages.average(l))
 
         # Add dependency to compute loss_averages.
@@ -217,7 +217,7 @@ def train(target, dataset, cluster_spec):
       # Add histograms for gradients.
       for grad, var in grads:
         if grad is not None:
-          tf.summary.histogram(var.op.name + '/gradients', grad)
+          tf.summary.histogram(f'{var.op.name}/gradients', grad)
 
       apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
 
@@ -250,7 +250,7 @@ def train(target, dataset, cluster_spec):
                                saver=saver,
                                save_model_secs=FLAGS.save_interval_secs)
 
-      tf.logging.info('%s Supervisor' % datetime.now())
+      tf.logging.info(f'{datetime.now()} Supervisor')
 
       sess_config = tf.ConfigProto(
           allow_soft_placement=True,

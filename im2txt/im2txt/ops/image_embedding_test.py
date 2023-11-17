@@ -44,7 +44,7 @@ class InceptionV3Test(tf.test.TestCase):
     for v in tf.global_variables():
       name_tokens = v.op.name.split("/")
       if name_tokens[0] == "InceptionV3":
-        name = "InceptionV3/" + name_tokens[1]
+        name = f"InceptionV3/{name_tokens[1]}"
         num_params = v.get_shape().num_elements()
         assert num_params
         counter[name] = counter.get(name, 0) + num_params

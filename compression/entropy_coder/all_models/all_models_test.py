@@ -29,6 +29,10 @@ class AllModelsTest(tf.test.TestCase):
     factory = model_factory.GetModelRegistry()
     model_names = factory.GetAvailableModels()
 
+    batch_size = 3
+    height = 40
+    width = 20
+    depth = 5
     for m in model_names:
       tf.reset_default_graph()
 
@@ -38,30 +42,25 @@ class AllModelsTest(tf.test.TestCase):
 
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
 
-      batch_size = 3
-      height = 40
-      width = 20
-      depth = 5
       binary_codes = tf.placeholder(dtype=tf.float32,
                                     shape=[batch_size, height, width, depth])
 
       # Create a model with the default configuration.
-      print('Creating model: {}'.format(m))
+      print(f'Creating model: {m}')
       model = factory.CreateModel(m)
       model.Initialize(global_step,
                        optimizer,
                        model.GetConfigStringForUnitTest())
-      self.assertTrue(model.loss is None, 'model: {}'.format(m))
-      self.assertTrue(model.train_op is None, 'model: {}'.format(m))
-      self.assertTrue(model.average_code_length is None, 'model: {}'.format(m))
+      self.assertTrue(model.loss is None, f'model: {m}')
+      self.assertTrue(model.train_op is None, f'model: {m}')
+      self.assertTrue(model.average_code_length is None, f'model: {m}')
 
       # Build the Tensorflow graph corresponding to the model.
       model.BuildGraph(binary_codes)
-      self.assertTrue(model.loss is not None, 'model: {}'.format(m))
-      self.assertTrue(model.average_code_length is not None,
-                      'model: {}'.format(m))
+      self.assertTrue(model.loss is not None, f'model: {m}')
+      self.assertTrue(model.average_code_length is not None, f'model: {m}')
       if model.train_op is None:
-        print('Model {} is not trainable'.format(m))
+        print(f'Model {m} is not trainable')
 
 
 if __name__ == '__main__':

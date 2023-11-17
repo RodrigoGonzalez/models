@@ -50,7 +50,7 @@ def get_dataset(dataset_name,
   """
   dataset_name_to_module = {'mnist': mnist, 'mnist_m': mnist_m}
   if dataset_name not in dataset_name_to_module:
-    raise ValueError('Name of dataset unknown %s.' % dataset_name)
+    raise ValueError(f'Name of dataset unknown {dataset_name}.')
 
   return dataset_name_to_module[dataset_name].get_split(split_name, dataset_dir,
                                                         file_pattern, reader)

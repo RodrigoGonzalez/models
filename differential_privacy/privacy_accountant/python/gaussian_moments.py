@@ -50,9 +50,7 @@ from sympy.mpmath import mp
 
 
 def _to_np_float64(v):
-  if math.isnan(v) or math.isinf(v):
-    return np.inf
-  return np.float64(v)
+  return np.inf if math.isnan(v) or math.isinf(v) else np.float64(v)
 
 
 ######################
@@ -65,10 +63,7 @@ def pdf_gauss(x, sigma, mean=0):
 
 
 def cropped_ratio(a, b):
-  if a < 1E-50 and b < 1E-50:
-    return 1.
-  else:
-    return a / b
+  return 1. if a < 1E-50 and b < 1E-50 else a / b
 
 
 def integral_inf(fn):
@@ -296,10 +291,7 @@ def compute_log_moment(q, sigma, steps, lmbd, verify=False, verbose=False):
     if not np.isinf(moment_a_mp):
       # The following test fails for (1, np.inf)!
       np.testing.assert_array_less(moment_b_mp, moment_a_mp)
-  if np.isinf(moment):
-    return np.inf
-  else:
-    return np.log(moment) * steps
+  return np.inf if np.isinf(moment) else np.log(moment) * steps
 
 
 def get_privacy_spent(log_moments, target_eps=None, target_delta=None):
@@ -316,7 +308,7 @@ def get_privacy_spent(log_moments, target_eps=None, target_delta=None):
     eps, delta pair
   """
   assert (target_eps is None) ^ (target_delta is None)
-  assert not ((target_eps is None) and (target_delta is None))
+  assert target_eps is not None or target_delta is not None
   if target_eps is not None:
     return (target_eps, _compute_delta(log_moments, target_eps))
   else:

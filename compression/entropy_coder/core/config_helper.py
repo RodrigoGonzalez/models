@@ -22,10 +22,7 @@ import tensorflow as tf
 
 
 def GetConfigString(config_file):
-  config_string = ''
-  if config_file is not None:
-    config_string = open(config_file).read()
-  return config_string
+  return open(config_file).read() if config_file is not None else ''
 
 
 class InputConfig(object):

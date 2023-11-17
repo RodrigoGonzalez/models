@@ -44,13 +44,12 @@ class Loader():
       data_dir = self.get_data_dir()
     full_file_name = os.path.join(data_dir, 'meta', file_name)
     assert(fu.exists(full_file_name)), \
-      '{:s} does not exist'.format(full_file_name)
+        '{:s} does not exist'.format(full_file_name)
     ext = os.path.splitext(full_file_name)[1]
     if ext == '.txt':
       ls = []
       with fu.fopen(full_file_name, 'r') as f:
-        for l in f:
-          ls.append(l.rstrip())
+        ls.extend(l.rstrip() for l in f)
     elif ext == '.pkl':
       ls = utils.load_variables(full_file_name)
     return ls
@@ -58,11 +57,14 @@ class Loader():
   def load_building(self, name, data_dir=None):
     if data_dir is None:
       data_dir = self.get_data_dir()
-    out = {}
-    out['name'] = name
-    out['data_dir'] = data_dir
-    out['room_dimension_file'] = os.path.join(data_dir, 'room-dimension',
-                                              name+'.pkl')
+    out = {
+        'name':
+        name,
+        'data_dir':
+        data_dir,
+        'room_dimension_file':
+        os.path.join(data_dir, 'room-dimension', f'{name}.pkl'),
+    }
     out['class_map_folder'] = os.path.join(data_dir, 'class-maps')
     return out
 
@@ -95,8 +97,7 @@ class StanfordBuildingParserDataset(Loader):
       logging.fatal('Unknown version.')
 
   def _get_benchmark_sets(self):
-    sets = ['train1', 'val', 'test']
-    return sets
+    return ['train1', 'val', 'test']
 
   def _get_split(self, split_name):
     train = ['area1', 'area5a', 'area5b', 'area6']
@@ -104,10 +105,11 @@ class StanfordBuildingParserDataset(Loader):
     val = ['area3']
     test = ['area4']
 
-    sets = {}
-    sets['train'] = train
-    sets['train1'] = train1
-    sets['val'] = val
-    sets['test'] = test
-    sets['all'] = sorted(list(set(train + val + test)))
+    sets = {
+        'train': train,
+        'train1': train1,
+        'val': val,
+        'test': test,
+        'all': sorted(list(set(train + val + test))),
+    }
     return sets[split_name]

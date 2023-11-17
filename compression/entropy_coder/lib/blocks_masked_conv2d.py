@@ -149,8 +149,8 @@ class GroupRasterScanConv2D(blocks_std.Conv2DBase):
 
       if depth % self._output_group_size != 0:
         raise ValueError(
-            'Invalid depth group size: {} for depth {}'.format(
-                self._output_group_size, depth))
+            f'Invalid depth group size: {self._output_group_size} for depth {depth}'
+        )
       self._output_group_count = depth // self._output_group_size
 
   def _CreateKernel(self, shape, dtype):
@@ -160,8 +160,8 @@ class GroupRasterScanConv2D(blocks_std.Conv2DBase):
     depth_input = shape[2]
     if depth_input % self._input_group_size != 0:
       raise ValueError(
-          'Invalid depth group size: {} for depth {}'.format(
-              self._input_group_size, depth_input))
+          f'Invalid depth group size: {self._input_group_size} for depth {depth_input}'
+      )
     input_group_count = depth_input // self._input_group_size
     output_group_count = self._output_group_count
 

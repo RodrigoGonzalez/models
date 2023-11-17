@@ -75,11 +75,10 @@ def get_default_cmp_args():
   return arch_args, mapper_arch_args
 
 def get_arch_vars(arch_str):
-  if arch_str == '': vals = []
-  else: vals = arch_str.split('_')
+  vals = [] if arch_str == '' else arch_str.split('_')
   ks = ['var1', 'var2', 'var3']
   ks = ks[:len(vals)]
-  
+
   # Exp Ver.
   if len(vals) == 0: ks.append('var1'); vals.append('v0')
   # custom arch.
@@ -123,7 +122,7 @@ def process_arch_learned_map(args, arch_vars):
   # Multiscale vision based system.
   args.navtask.task_params.input_type = 'vision'
   args.navtask.task_params.outputs.images = True
-  
+
   if args.navtask.camera_param.modalities[0] == 'rgb':
     args.solver.pretrained_path = rgb_resnet_v2_50_path
   elif args.navtask.camera_param.modalities[0] == 'depth':
@@ -146,8 +145,7 @@ def process_arch_learned_map(args, arch_vars):
     args.mapper_arch.deconv_neurons = [64, 32, 16]
     args.mapper_arch.deconv_strides = [1, 2, 1]
 
-  elif (arch_vars.var2 == 'Msc' or arch_vars.var2 == 'MscROMms' or
-        arch_vars.var2 == 'MscROMss' or arch_vars.var2 == 'MscNoVin'):
+  elif arch_vars.var2 in ['Msc', 'MscROMms', 'MscROMss', 'MscNoVin']:
     # Code for multi-scale planner.
     args.arch.vin_num_iters = 8
     args.arch.crop_remove_each = 4
@@ -161,7 +159,7 @@ def process_arch_learned_map(args, arch_vars):
 
     args.navtask.task_params.map_scales = \
         list(sc*(0.5**(np.arange(n_scales))[::-1]))
-    args.navtask.task_params.map_crop_sizes = [16 for x in range(n_scales)]
+    args.navtask.task_params.map_crop_sizes = [16 for _ in range(n_scales)]
 
     args.arch.fr_stride = 1
     args.arch.vin_action_neurons = 8
@@ -183,7 +181,7 @@ def process_arch_learned_map(args, arch_vars):
       args.arch.value_crop_size = 4
       args.arch.vin_num_iters = 0
 
-    elif arch_vars.var2 == 'MscROMms' or arch_vars.var2 == 'MscROMss':
+    elif arch_vars.var2 in ['MscROMms', 'MscROMss']:
       # Code with read outs, MscROMms flattens and reads out,
       # MscROMss does not flatten and produces output at multiple scales.
       args.navtask.task_params.outputs.readout_maps = True
@@ -192,17 +190,15 @@ def process_arch_learned_map(args, arch_vars):
 
       if arch_vars.var2 == 'MscROMms':
         args.arch.rom_arch.num_neurons = [64, 1]
-        args.arch.rom_arch.kernel_size = 4
         args.arch.rom_arch.strides = [2,2]
         args.arch.rom_arch.layers_per_block = 2
 
         args.navtask.task_params.readout_maps_crop_sizes = [64]
         args.navtask.task_params.readout_maps_scales = [sc]
 
-      elif arch_vars.var2 == 'MscROMss':
+      else:
         args.arch.rom_arch.num_neurons = \
             [64, len(args.navtask.task_params.map_scales)]
-        args.arch.rom_arch.kernel_size = 4
         args.arch.rom_arch.strides = [1,1]
         args.arch.rom_arch.layers_per_block = 1
 
@@ -211,6 +207,7 @@ def process_arch_learned_map(args, arch_vars):
         args.navtask.task_params.readout_maps_scales = \
             args.navtask.task_params.map_scales
 
+      args.arch.rom_arch.kernel_size = 4
   else:
     logging.fatal('arch_vars.var2 not one of Msc, MscROMms, MscROMss, MscNoVin.')
     assert(False)
@@ -218,7 +215,7 @@ def process_arch_learned_map(args, arch_vars):
   map_channels = args.mapper_arch.deconv_neurons[-1] / \
     (2*len(args.navtask.task_params.map_scales))
   args.navtask.task_params.map_channels = map_channels
-  
+
   return args
 
 def process_arch_projected_map(args, arch_vars):

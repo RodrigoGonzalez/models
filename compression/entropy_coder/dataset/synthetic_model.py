@@ -66,9 +66,5 @@ def GenerateSingleCode(code_shape):
         v1 = ComputeLineCrc(code, width, y, x, d)
         v2 = ComputeDepthCrc(code, y, x, d)
         v = 1 if (v1 + v2 >= 6) else 0
-        if np.random.rand() < keep_value_proba:
-          code[y, x, d] = v
-        else:
-          code[y, x, d] = 1 - v
-
+        code[y, x, d] = v if np.random.rand() < keep_value_proba else 1 - v
   return code

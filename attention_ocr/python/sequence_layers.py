@@ -338,10 +338,7 @@ class NetSliceWithAutoregression(NetSlice):
 
   def get_train_input(self, prev, i):
     """See SequenceLayerBase.get_train_input for details."""
-    if i == 0:
-      prev = self._zero_label
-    else:
-      prev = self._labels_one_hot[:, i - 1, :]
+    prev = self._zero_label if i == 0 else self._labels_one_hot[:, i - 1, :]
     image_feature = self.get_image_feature(i)
     return tf.concat([image_feature, prev], 1)
 
@@ -382,19 +379,14 @@ class AttentionWithAutoregression(Attention):
 
   def get_train_input(self, prev, i):
     """See SequenceLayerBase.get_train_input for details."""
-    if i == 0:
-      return self._zero_label
-    else:
-      # TODO(gorban): update to gradually introduce gt labels.
-      return self._labels_one_hot[:, i - 1, :]
+    return self._zero_label if i == 0 else self._labels_one_hot[:, i - 1, :]
 
   def get_eval_input(self, prev, i):
     """See SequenceLayerBase.get_eval_input for details."""
     if i == 0:
       return self._zero_label
-    else:
-      logit = self.char_logit(prev, char_index=i - 1)
-      return self.char_one_hot(logit)
+    logit = self.char_logit(prev, char_index=i - 1)
+    return self.char_one_hot(logit)
 
 
 def get_layer_class(use_attention, use_autoregression):
@@ -409,14 +401,11 @@ def get_layer_class(use_attention, use_autoregression):
   """
   if use_attention and use_autoregression:
     layer_class = AttentionWithAutoregression
-  elif use_attention and not use_autoregression:
+  elif use_attention:
     layer_class = Attention
-  elif not use_attention and not use_autoregression:
+  elif not use_autoregression:
     layer_class = NetSlice
-  elif not use_attention and use_autoregression:
-    layer_class = NetSliceWithAutoregression
   else:
-    raise AssertionError('Unsupported sequence layer class')
-
+    layer_class = NetSliceWithAutoregression
   logging.debug('Use %s as a layer class', layer_class.__name__)
   return layer_class

@@ -66,57 +66,75 @@ _add_summaries          = cmp_s._add_summaries
 def _inputs(problem):
   # Set up inputs.
   with tf.name_scope('inputs'):
-    inputs = []
-    inputs.append(('orig_maps', tf.float32, 
-                   (problem.batch_size, 1, None, None, 1)))
-    inputs.append(('goal_loc', tf.float32, 
-                   (problem.batch_size, problem.num_goals, 2)))
+    inputs = [
+        ('orig_maps', tf.float32, (problem.batch_size, 1, None, None, 1)),
+        ('goal_loc', tf.float32, (problem.batch_size, problem.num_goals, 2)),
+    ]
     common_input_data, _ = tf_utils.setup_inputs(inputs)
 
     inputs = []
-    if problem.input_type == 'vision':
+    if problem.input_type == 'analytical_counts':
+      inputs.extend((
+          'analytical_counts_{:d}'.format(i),
+          tf.float32,
+          (
+              problem.batch_size,
+              None,
+              problem.map_crop_sizes[i],
+              problem.map_crop_sizes[i],
+              problem.map_channels,
+          ),
+      ) for i in range(len(problem.map_crop_sizes)))
+    elif problem.input_type == 'vision':
       # Multiple images from an array of cameras.
       inputs.append(('imgs', tf.float32, 
                      (problem.batch_size, None, len(problem.aux_delta_thetas)+1,
                       problem.img_height, problem.img_width,
                       problem.img_channels)))
-    elif problem.input_type == 'analytical_counts':
-      for i in range(len(problem.map_crop_sizes)):
-        inputs.append(('analytical_counts_{:d}'.format(i), tf.float32, 
-                      (problem.batch_size, None, problem.map_crop_sizes[i],
-                       problem.map_crop_sizes[i], problem.map_channels)))
-
     if problem.outputs.readout_maps: 
-      for i in range(len(problem.readout_maps_crop_sizes)):
-        inputs.append(('readout_maps_{:d}'.format(i), tf.float32, 
-                      (problem.batch_size, None,
-                       problem.readout_maps_crop_sizes[i],
-                       problem.readout_maps_crop_sizes[i],
-                       problem.readout_maps_channels)))
-
+      inputs.extend((
+          'readout_maps_{:d}'.format(i),
+          tf.float32,
+          (
+              problem.batch_size,
+              None,
+              problem.readout_maps_crop_sizes[i],
+              problem.readout_maps_crop_sizes[i],
+              problem.readout_maps_channels,
+          ),
+      ) for i in range(len(problem.readout_maps_crop_sizes)))
     for i in range(len(problem.map_crop_sizes)):
       inputs.append(('ego_goal_imgs_{:d}'.format(i), tf.float32, 
                     (problem.batch_size, None, problem.map_crop_sizes[i],
                      problem.map_crop_sizes[i], problem.goal_channels)))
-      for s in ['sum_num', 'sum_denom', 'max_denom']:
-        inputs.append(('running_'+s+'_{:d}'.format(i), tf.float32,
-                       (problem.batch_size, 1, problem.map_crop_sizes[i],
-                        problem.map_crop_sizes[i], problem.map_channels)))
-
-    inputs.append(('incremental_locs', tf.float32, 
-                   (problem.batch_size, None, 2)))
-    inputs.append(('incremental_thetas', tf.float32, 
-                   (problem.batch_size, None, 1)))
-    inputs.append(('step_number', tf.int32, (1, None, 1)))
-    inputs.append(('node_ids', tf.int32, (problem.batch_size, None,
-                                          problem.node_ids_dim)))
-    inputs.append(('perturbs', tf.float32, (problem.batch_size, None,
-                                            problem.perturbs_dim)))
-    
-    # For plotting result plots
-    inputs.append(('loc_on_map', tf.float32, (problem.batch_size, None, 2)))
-    inputs.append(('gt_dist_to_goal', tf.float32, (problem.batch_size, None, 1)))
-
+      inputs.extend((
+          f'running_{s}' + '_{:d}'.format(i),
+          tf.float32,
+          (
+              problem.batch_size,
+              1,
+              problem.map_crop_sizes[i],
+              problem.map_crop_sizes[i],
+              problem.map_channels,
+          ),
+      ) for s in ['sum_num', 'sum_denom', 'max_denom'])
+    inputs.extend((
+        ('incremental_locs', tf.float32, (problem.batch_size, None, 2)),
+        ('incremental_thetas', tf.float32, (problem.batch_size, None, 1)),
+        ('step_number', tf.int32, (1, None, 1)),
+        (
+            'node_ids',
+            tf.int32,
+            (problem.batch_size, None, problem.node_ids_dim),
+        ),
+        (
+            'perturbs',
+            tf.float32,
+            (problem.batch_size, None, problem.perturbs_dim),
+        ),
+        ('loc_on_map', tf.float32, (problem.batch_size, None, 2)),
+        ('gt_dist_to_goal', tf.float32, (problem.batch_size, None, 1)),
+    ))
     step_input_data, _ = tf_utils.setup_inputs(inputs)
 
     inputs = []

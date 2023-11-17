@@ -54,8 +54,6 @@ def add_task_specific_model(images,
   """
 
   model = hparams.task_tower
-  # Make sure the classifier name shows up in graph
-  shared_scope = shared_scope or (model + '_shared')
   kwargs = {
       'num_classes': num_classes,
       'is_training': is_training,
@@ -65,15 +63,15 @@ def add_task_specific_model(images,
 
   if private_scope:
     kwargs['private_scope'] = private_scope
-  if shared_scope:
+  if shared_scope := shared_scope or f'{model}_shared':
     kwargs['shared_scope'] = shared_scope
 
   quaternion_pred = None
   with slim.arg_scope(
-      [slim.conv2d, slim.fully_connected],
-      activation_fn=tf.nn.relu,
-      weights_regularizer=tf.contrib.layers.l2_regularizer(
-          hparams.weight_decay_task_classifier)):
+        [slim.conv2d, slim.fully_connected],
+        activation_fn=tf.nn.relu,
+        weights_regularizer=tf.contrib.layers.l2_regularizer(
+            hparams.weight_decay_task_classifier)):
     with slim.arg_scope([slim.conv2d], padding='SAME'):
       if model == 'doubling_pose_estimator':
         logits, quaternion_pred = doubling_cnn_class_and_quaternion(
@@ -87,7 +85,7 @@ def add_task_specific_model(images,
       elif model == 'pose_mini':
         logits, quaternion_pred = pose_mini_tower(images, **kwargs)
       else:
-        raise ValueError('Unknown task classifier %s' % model)
+        raise ValueError(f'Unknown task classifier {model}')
 
   return logits, quaternion_pred
 
@@ -291,16 +289,16 @@ def doubling_cnn_class_and_quaternion(images,
 
   with tf.variable_scope(private_scope, reuse=reuse_private):
     while num_private_layers > 0 and net.shape.as_list()[1] > 5:
-      net = slim.conv2d(net, depth, [3, 3], scope='conv%s' % layer_id)
-      net = slim.max_pool2d(net, [2, 2], stride=2, scope='pool%s' % layer_id)
+      net = slim.conv2d(net, depth, [3, 3], scope=f'conv{layer_id}')
+      net = slim.max_pool2d(net, [2, 2], stride=2, scope=f'pool{layer_id}')
       depth *= 2
       layer_id += 1
       num_private_layers -= 1
 
   with tf.variable_scope(shared_scope, reuse=reuse_shared):
     while net.shape.as_list()[1] > 5:
-      net = slim.conv2d(net, depth, [3, 3], scope='conv%s' % layer_id)
-      net = slim.max_pool2d(net, [2, 2], stride=2, scope='pool%s' % layer_id)
+      net = slim.conv2d(net, depth, [3, 3], scope=f'conv{layer_id}')
+      net = slim.max_pool2d(net, [2, 2], stride=2, scope=f'pool{layer_id}')
       depth *= 2
       layer_id += 1
 

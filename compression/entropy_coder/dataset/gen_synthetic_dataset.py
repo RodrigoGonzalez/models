@@ -79,9 +79,11 @@ def GenerateDataset(filename, count, code_shape):
 
 
 def main(argv=None):  # pylint: disable=unused-argument
-  GenerateDataset(os.path.join(FLAGS.dataset_dir + '/synthetic_dataset'),
-                  FLAGS.count,
-                  [35, 48, 8])
+  GenerateDataset(
+      os.path.join(f'{FLAGS.dataset_dir}/synthetic_dataset'),
+      FLAGS.count,
+      [35, 48, 8],
+  )
 
 
 if __name__ == '__main__':

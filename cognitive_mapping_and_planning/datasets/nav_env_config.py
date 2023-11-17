@@ -71,7 +71,7 @@ def nav_env_base_config():
   class_map_names = ['chair', 'door', 'table']
   semantic_task = utils.Foo(class_map_names=class_map_names, pix_distance=16,
                             sampling='uniform')
-  
+
   # time per iteration for cmp is 0.82 seconds per episode with 3.4s overhead per batch.
   task_params = utils.Foo(max_dist=32,
                           step_size=8,
@@ -115,13 +115,13 @@ def nav_env_base_config():
                           rejection_sampling_M=100,
                           min_dist=None)
 
-  navtask_args = utils.Foo(
+  return utils.Foo(
       building_names=['area1_gates_wingA_floor1_westpart'],
       env_class=nav_env.VisualNavigationEnv,
       robot=robot,
       task_params=task_params,
       env=env,
       camera_param=camera_param,
-      cache_rooms=True)
-  return navtask_args
+      cache_rooms=True,
+  )
 

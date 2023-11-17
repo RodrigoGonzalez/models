@@ -101,7 +101,7 @@ def process_image(encoded_image,
     elif image_format == "png":
       image = tf.image.decode_png(encoded_image, channels=3)
     else:
-      raise ValueError("Invalid image format: %s" % image_format)
+      raise ValueError(f"Invalid image format: {image_format}")
   image = tf.image.convert_image_dtype(image, dtype=tf.float32)
   image_summary("original_image", image)
 

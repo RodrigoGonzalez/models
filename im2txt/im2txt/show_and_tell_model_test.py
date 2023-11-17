@@ -34,24 +34,23 @@ class ShowAndTellModel(show_and_tell_model.ShowAndTellModel):
     if self.mode == "inference":
       # Inference mode doesn't read from disk, so defer to parent.
       return super(ShowAndTellModel, self).build_inputs()
-    else:
-      # Replace disk I/O with random Tensors.
-      self.images = tf.random_uniform(
-          shape=[self.config.batch_size, self.config.image_height,
-                 self.config.image_width, 3],
-          minval=-1,
-          maxval=1)
-      self.input_seqs = tf.random_uniform(
-          [self.config.batch_size, 15],
-          minval=0,
-          maxval=self.config.vocab_size,
-          dtype=tf.int64)
-      self.target_seqs = tf.random_uniform(
-          [self.config.batch_size, 15],
-          minval=0,
-          maxval=self.config.vocab_size,
-          dtype=tf.int64)
-      self.input_mask = tf.ones_like(self.input_seqs)
+    # Replace disk I/O with random Tensors.
+    self.images = tf.random_uniform(
+        shape=[self.config.batch_size, self.config.image_height,
+               self.config.image_width, 3],
+        minval=-1,
+        maxval=1)
+    self.input_seqs = tf.random_uniform(
+        [self.config.batch_size, 15],
+        minval=0,
+        maxval=self.config.vocab_size,
+        dtype=tf.int64)
+    self.target_seqs = tf.random_uniform(
+        [self.config.batch_size, 15],
+        minval=0,
+        maxval=self.config.vocab_size,
+        dtype=tf.int64)
+    self.input_mask = tf.ones_like(self.input_seqs)
 
 
 class ShowAndTellModelTest(tf.test.TestCase):
@@ -106,8 +105,7 @@ class ShowAndTellModelTest(tf.test.TestCase):
       expected = expected_shapes[tensor]
       actual = output.shape
       if expected != actual:
-        self.fail("Tensor %s has shape %s (expected %s)." %
-                  (tensor, actual, expected))
+        self.fail(f"Tensor {tensor} has shape {actual} (expected {expected}).")
 
   def testBuildForTraining(self):
     model = ShowAndTellModel(self._model_config, mode="train")

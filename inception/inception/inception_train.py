@@ -129,10 +129,10 @@ def _tower_loss(images, labels, num_classes, scope, reuse_variables=None):
   for l in losses + [total_loss]:
     # Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
     # session. This helps the clarity of presentation on TensorBoard.
-    loss_name = re.sub('%s_[0-9]*/' % inception.TOWER_NAME, '', l.op.name)
+    loss_name = re.sub(f'{inception.TOWER_NAME}_[0-9]*/', '', l.op.name)
     # Name each loss as '(raw)' and name the moving average version of the loss
     # as the original loss name.
-    tf.summary.scalar(loss_name +' (raw)', l)
+    tf.summary.scalar(f'{loss_name} (raw)', l)
     tf.summary.scalar(loss_name, loss_averages.average(l))
 
   with tf.control_dependencies([loss_averages_op]):
@@ -180,7 +180,7 @@ def _average_gradients(tower_grads):
 
 def train(dataset):
   """Train on dataset for a number of steps."""
-  with tf.Graph().as_default(), tf.device('/cpu:0'):
+  with (tf.Graph().as_default(), tf.device('/cpu:0')):
     # Create a variable to count the number of train() calls. This equals the
     # number of batches processed * FLAGS.num_gpus.
     global_step = tf.get_variable(
@@ -222,7 +222,6 @@ def train(dataset):
     # Label 0 is reserved for an (unused) background class.
     num_classes = dataset.num_classes() + 1
 
-     # Split the batch of images and labels for towers.
     images_splits = tf.split(axis=0, num_or_size_splits=FLAGS.num_gpus, value=images)
     labels_splits = tf.split(axis=0, num_or_size_splits=FLAGS.num_gpus, value=labels)
 
@@ -273,8 +272,7 @@ def train(dataset):
     # Add histograms for gradients.
     for grad, var in grads:
       if grad is not None:
-        summaries.append(
-            tf.summary.histogram(var.op.name + '/gradients', grad))
+        summaries.append(tf.summary.histogram(f'{var.op.name}/gradients', grad))
 
     # Apply the gradients to adjust the shared variables.
     apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
@@ -323,8 +321,9 @@ def train(dataset):
           slim.variables.VARIABLES_TO_RESTORE)
       restorer = tf.train.Saver(variables_to_restore)
       restorer.restore(sess, FLAGS.pretrained_model_checkpoint_path)
-      print('%s: Pre-trained model restored from %s' %
-            (datetime.now(), FLAGS.pretrained_model_checkpoint_path))
+      print(
+          f'{datetime.now()}: Pre-trained model restored from {FLAGS.pretrained_model_checkpoint_path}'
+      )
 
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)

@@ -250,13 +250,8 @@ def predictions(logits):
   """Class prediction from logits."""
   inner_dim = logits.get_shape().as_list()[-1]
   with tf.name_scope('predictions'):
-    # For binary classification
-    if inner_dim == 1:
-      pred = tf.cast(tf.greater(tf.squeeze(logits), 0.5), tf.int64)
-    # For multi-class classification
-    else:
-      pred = tf.argmax(logits, 1)
-    return pred
+    return (tf.cast(tf.greater(tf.squeeze(logits), 0.5), tf.int64)
+            if inner_dim == 1 else tf.argmax(logits, 1))
 
 
 def _num_labels(weights):
@@ -369,7 +364,7 @@ def _summarize_vars_and_grads(grads_and_vars):
     tf.logging.info(var)
 
     def tag(name, v=var):
-      return v.op.name + '_' + name
+      return f'{v.op.name}_{name}'
 
     # Variable summary
     mean = tf.reduce_mean(var)
@@ -383,11 +378,7 @@ def _summarize_vars_and_grads(grads_and_vars):
 
     # Gradient summary
     if grad is not None:
-      if isinstance(grad, tf.IndexedSlices):
-        grad_values = grad.values
-      else:
-        grad_values = grad
-
+      grad_values = grad.values if isinstance(grad, tf.IndexedSlices) else grad
       tf.summary.histogram(tag('gradient'), grad_values)
       tf.summary.scalar(tag('gradient_norm'), tf.global_norm([grad_values]))
     else:

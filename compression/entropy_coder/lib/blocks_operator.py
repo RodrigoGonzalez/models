@@ -57,9 +57,7 @@ class LineOperator(block_base.BlockBase):
       raise ValueError('Unknown tensor height')
     all_line_x = tf.split(value=x, num_or_size_splits=height, axis=1)
 
-    y = []
-    for line_x in all_line_x:
-      y.append(self._block(line_x))
+    y = [self._block(line_x) for line_x in all_line_x]
     y = tf.concat(values=y, axis=1)
 
     return y
